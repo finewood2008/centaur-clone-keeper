@@ -8,11 +8,12 @@ import {
   LayoutDashboard, Inbox, Share2, Megaphone, Mail,
   Users, Package, ChevronLeft, ChevronRight, Bell, Search,
   Settings, Zap, Activity, Cpu, HardDrive, Database,
-  Archive, Download,
+  Archive, Download, Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import AgentStatusPanel from "./AgentStatusPanel";
+import PointsStatusBar from "./PointsStatusBar";
 
 interface NavItem {
   icon: React.ElementType;
@@ -36,6 +37,7 @@ const dataNavItems: NavItem[] = [
   { icon: Database, label: "数据中心", href: "/data", description: "数据安全与管理" },
   { icon: Archive, label: "备份中心", href: "/data/backup", description: "自动备份与恢复" },
   { icon: Download, label: "数据导出", href: "/data/export", description: "多格式数据导出" },
+  { icon: Coins, label: "消费中心", href: "/billing", description: "计费与点数管理" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -116,6 +118,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <PointsStatusBar />
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
               <div className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse-glow" />
               <span>5 Agents Active</span>

@@ -27,6 +27,9 @@ import Products from "./pages/Products";
 import DataCenter from "./pages/data/DataCenter";
 import DataBackup from "./pages/data/DataBackup";
 import DataExport from "./pages/data/DataExport";
+import BillingCenter from "./pages/billing/BillingCenter";
+import BillingSettings from "./pages/billing/BillingSettings";
+import BillingInvoice from "./pages/billing/BillingInvoice";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -69,6 +72,9 @@ const App = () => (
               <Route path="/data" element={<DataCenter />} />
               <Route path="/data/backup" element={<DataBackup />} />
               <Route path="/data/export" element={<DataExport />} />
+              <Route path="/billing" element={<BillingCenter />} />
+              <Route path="/billing/settings" element={<BillingSettings />} />
+              <Route path="/billing/invoice" element={<BillingInvoice />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
