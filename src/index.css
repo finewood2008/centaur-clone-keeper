@@ -79,3 +79,17 @@
 .font-mono {
   font-family: 'IBM Plex Mono', monospace;
 }
+
+/* Tiptap editor styles */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+  height: 0;
+}
+.tiptap ul { list-style: disc; padding-left: 1.2em; }
+.tiptap ol { list-style: decimal; padding-left: 1.2em; }
+.tiptap a { color: hsl(var(--primary)); text-decoration: underline; }
+.tiptap mark { background-color: hsl(var(--primary) / 0.25); border-radius: 2px; padding: 0 2px; }
+.tiptap blockquote { border-left: 3px solid hsl(var(--border)); padding-left: 0.8em; color: hsl(var(--muted-foreground)); }
