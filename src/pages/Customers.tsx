@@ -250,6 +250,7 @@ export default function Customers() {
   const custId = selectedCustomer ? `CUST-20240315-${String(selectedCustomer.id).padStart(3, "0")}` : "";
 
   return (
+    <>
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
