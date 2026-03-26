@@ -62,6 +62,17 @@ export default function EmailCreate() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sequenceEnabled, setSequenceEnabled] = useState(true);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+
+  const renderPreviewHtml = () => {
+    const filled = body
+      .replace(/\{\{firstName\}\}/g, "John")
+      .replace(/\{\{companyName\}\}/g, "ABC Corp")
+      .replace(/\{\{industry\}\}/g, "LED Lighting")
+      .replace(/\{\{senderName\}\}/g, "Alex Wang");
+    return filled;
+  };
 
   const handleGenerate = async () => {
     setIsGenerating(true);
