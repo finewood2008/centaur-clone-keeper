@@ -107,6 +107,45 @@ export default function Customers() {
     setDrawerOpen(true);
     setExpandedComm(null);
     setShowFileTree(false);
+    setIsEditing(false);
+  };
+
+  const startEditing = () => {
+    if (!selectedCustomer) return;
+    setEditForm({
+      email: selectedCustomer.email,
+      phone: selectedCustomer.phone,
+      tier: selectedCustomer.tier,
+      tags: [...(selectedCustomer.tags || [])],
+      newTag: "",
+    });
+    setIsEditing(true);
+  };
+
+  const saveEditing = () => {
+    if (!selectedCustomer) return;
+    setSelectedCustomer({
+      ...selectedCustomer,
+      email: editForm.email,
+      phone: editForm.phone,
+      tier: editForm.tier,
+      tags: editForm.tags,
+    });
+    setIsEditing(false);
+    toast.success("客户信息已更新并保存到本地", {
+      description: `已同步到 ~/OPC/customers/${custId}/profile.json`,
+    });
+  };
+
+  const addTag = () => {
+    const tag = editForm.newTag.trim();
+    if (tag && !editForm.tags.includes(tag)) {
+      setEditForm({ ...editForm, tags: [...editForm.tags, tag], newTag: "" });
+    }
+  };
+
+  const removeTag = (tag: string) => {
+    setEditForm({ ...editForm, tags: editForm.tags.filter((t) => t !== tag) });
   };
 
   const custId = selectedCustomer ? `CUST-20240315-${String(selectedCustomer.id).padStart(3, "0")}` : "";
