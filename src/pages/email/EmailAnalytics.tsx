@@ -2,12 +2,13 @@
  * EmailAnalytics - 数据分析
  */
 import { useState } from "react";
-import { TrendingUp, Mail, Eye, MousePointerClick, Reply, Check, X, Lightbulb } from "lucide-react";
+import { TrendingUp, Mail, Eye, MousePointerClick, Reply, Check, X, Lightbulb, FlaskConical, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, Cell } from "recharts";
+import { Progress } from "@/components/ui/progress";
 
 const trendData = Array.from({ length: 30 }, (_, i) => {
   const d = new Date(2026, 2, i + 1);
@@ -25,6 +26,49 @@ const campaigns = [
   { name: "Monthly Product Newsletter", status: "completed", sent: 850, openRate: 40, clicked: 89, replyRate: 0.6 },
 ];
 
+const abTests = [
+  {
+    id: "1",
+    campaign: "LED Buyers - North America Q1",
+    status: "completed" as const,
+    startDate: "2026-03-15",
+    sampleSize: 450,
+    variants: [
+      { name: "A", subject: "5 Year Warranty LED Bulbs - Factory Direct", sent: 225, opened: 99, openRate: 44.0, clicked: 38, clickRate: 16.9, replied: 14, replyRate: 6.2, isWinner: true },
+      { name: "B", subject: "Save 30% on LED Lighting - Limited Offer", sent: 225, opened: 72, openRate: 32.0, clicked: 25, clickRate: 11.1, replied: 9, replyRate: 4.0, isWinner: false },
+    ],
+    confidence: 95,
+  },
+  {
+    id: "2",
+    campaign: "Solar Panel Follow-up Sequence",
+    status: "running" as const,
+    startDate: "2026-03-22",
+    sampleSize: 120,
+    variants: [
+      { name: "A", subject: "Quick question about your solar needs", sent: 60, opened: 31, openRate: 51.7, clicked: 18, clickRate: 30.0, replied: 9, replyRate: 15.0, isWinner: false },
+      { name: "B", subject: "How {{companyName}} can cut energy costs 40%", sent: 60, opened: 38, openRate: 63.3, clicked: 22, clickRate: 36.7, replied: 11, replyRate: 18.3, isWinner: false },
+    ],
+    confidence: 78,
+  },
+  {
+    id: "3",
+    campaign: "Monthly Product Newsletter",
+    status: "completed" as const,
+    startDate: "2026-03-01",
+    sampleSize: 850,
+    variants: [
+      { name: "A", subject: "March Product Updates & New Arrivals", sent: 425, opened: 153, openRate: 36.0, clicked: 38, clickRate: 8.9, replied: 2, replyRate: 0.5, isWinner: false },
+      { name: "B", subject: "3 New Products You Need to See This Month", sent: 425, opened: 187, openRate: 44.0, clicked: 51, clickRate: 12.0, replied: 3, replyRate: 0.7, isWinner: true },
+    ],
+    confidence: 97,
+  },
+];
+
+const abStatusConfig: Record<string, { label: string; className: string }> = {
+  running: { label: "测试中", className: "bg-primary/15 text-primary" },
+  completed: { label: "已完成", className: "bg-brand-green/15 text-brand-green" },
+};
 const statusConfig: Record<string, { label: string; className: string }> = {
   active: { label: "进行中", className: "bg-brand-green/15 text-brand-green" },
   completed: { label: "已完成", className: "bg-brand-cyan/15 text-brand-cyan" },
@@ -97,6 +141,107 @@ export default function EmailAnalytics() {
                 <Line yAxisId="right" type="monotone" dataKey="openRate" name="打开率%" stroke="hsl(var(--brand-green))" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
+          </div>
+
+          {/* A/B Test Section */}
+          <div className="bg-card border border-border rounded-xl">
+            <div className="px-4 py-3 border-b border-border flex items-center gap-1.5">
+              <FlaskConical className="w-3.5 h-3.5 text-primary" />
+              <h3 className="font-display font-semibold text-sm">A/B 测试对比</h3>
+            </div>
+            <div className="divide-y divide-border">
+              {abTests.map((test) => {
+                const s = abStatusConfig[test.status];
+                const chartData = test.variants.map((v) => ({
+                  name: `版本 ${v.name}`,
+                  openRate: v.openRate,
+                  clickRate: v.clickRate,
+                  replyRate: v.replyRate,
+                }));
+                const winner = test.variants.find((v) => v.isWinner);
+                return (
+                  <div key={test.id} className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold">{test.campaign}</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">开始: {test.startDate} · 样本: {test.sampleSize}封</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded", s.className)}>{s.label}</span>
+                        {test.status === "completed" && winner && (
+                          <Badge variant="outline" className="text-[10px] h-4 text-primary border-primary/30 flex items-center gap-0.5">
+                            <Trophy className="w-2.5 h-2.5" /> 版本{winner.name}胜出
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Variant comparison */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {test.variants.map((v) => (
+                        <div key={v.name} className={cn("rounded-lg p-3 border text-xs space-y-2",
+                          v.isWinner ? "border-brand-green/40 bg-brand-green/5" : "border-border bg-secondary/20"
+                        )}>
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold flex items-center gap-1">
+                              版本 {v.name}
+                              {v.isWinner && <Trophy className="w-3 h-3 text-brand-green" />}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">{v.sent}封</span>
+                          </div>
+                          <div className="text-[10px] text-muted-foreground italic truncate" title={v.subject}>
+                            &ldquo;{v.subject}&rdquo;
+                          </div>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">打开率</span>
+                              <span className="font-bold">{v.openRate}%</span>
+                            </div>
+                            <Progress value={v.openRate} className="h-1" />
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">点击率</span>
+                              <span className="font-bold">{v.clickRate}%</span>
+                            </div>
+                            <Progress value={v.clickRate * 2} className="h-1" />
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">回复率</span>
+                              <span className="font-bold">{v.replyRate}%</span>
+                            </div>
+                            <Progress value={v.replyRate * 5} className="h-1" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Confidence */}
+                    <div className="flex items-center gap-2 text-[10px]">
+                      <span className="text-muted-foreground">统计置信度:</span>
+                      <div className="flex-1 max-w-32">
+                        <Progress value={test.confidence} className="h-1" />
+                      </div>
+                      <span className={cn("font-bold", test.confidence >= 95 ? "text-brand-green" : "text-primary")}>{test.confidence}%</span>
+                      {test.confidence >= 95 ? (
+                        <span className="text-brand-green">✓ 结果可靠</span>
+                      ) : (
+                        <span className="text-primary">需要更多数据</span>
+                      )}
+                    </div>
+
+                    {/* Bar chart comparison */}
+                    <ResponsiveContainer width="100%" height={100}>
+                      <BarChart data={chartData} barGap={4}>
+                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} unit="%" />
+                        <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }} />
+                        <Bar dataKey="openRate" name="打开率" fill="hsl(var(--brand-cyan))" radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="clickRate" name="点击率" fill="hsl(var(--brand-green))" radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="replyRate" name="回复率" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div className="bg-card border border-border rounded-xl">
