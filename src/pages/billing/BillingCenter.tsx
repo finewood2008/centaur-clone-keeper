@@ -260,7 +260,7 @@ export default function BillingCenter() {
           <CardContent className="p-5 flex flex-col gap-3">
             <div className="text-xs font-medium text-muted-foreground">快速操作</div>
             {[
-              { icon: ArrowUpRight, label: "升级套餐", desc: "解锁更多Agent与点数" },
+              { icon: ArrowUpRight, label: "升级套餐", desc: "解锁更多Agent与点数", to: "/billing/plans" },
               { icon: CreditCard, label: "充值点数", desc: "¥100 起充, 多买多送" },
               { icon: FileText, label: "账单详情", desc: "查看完整费用明细", to: "/billing/invoice" },
               { icon: Settings, label: "计费设置", desc: "消费提醒与上限控制", to: "/billing/settings" },

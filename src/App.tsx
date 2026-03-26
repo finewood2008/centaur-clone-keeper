@@ -30,6 +30,7 @@ import DataExport from "./pages/data/DataExport";
 import BillingCenter from "./pages/billing/BillingCenter";
 import BillingSettings from "./pages/billing/BillingSettings";
 import BillingInvoice from "./pages/billing/BillingInvoice";
+import BillingPlans from "./pages/billing/BillingPlans";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -75,6 +76,7 @@ const App = () => (
               <Route path="/billing" element={<BillingCenter />} />
               <Route path="/billing/settings" element={<BillingSettings />} />
               <Route path="/billing/invoice" element={<BillingInvoice />} />
+              <Route path="/billing/plans" element={<BillingPlans />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
