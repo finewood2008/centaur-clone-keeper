@@ -6,7 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Coins, TrendingUp, CreditCard, Settings, ChevronRight,
   Bot, FileText, ArrowUpRight, Download, Gift, Check, Sparkles,
+  Tag, X, Loader2,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -104,6 +106,13 @@ function AgentDetail({ agent, onClose }: { agent: typeof agentConsumption[0]; on
   );
 }
 
+/* ─── Coupon data ─── */
+const validCoupons: Record<string, { label: string; type: "percent" | "fixed"; value: number }> = {
+  "CHARGE10": { label: "充值立减", type: "percent", value: 10 },
+  "NEW50": { label: "新用户优惠", type: "fixed", value: 50 },
+  "VIP20": { label: "VIP专属优惠", type: "percent", value: 20 },
+};
+
 /* ─── Recharge Dialog ─── */
 const rechargeTiers = [
   { id: 1, price: 100, points: 1000, bonus: 0 },
@@ -115,7 +124,35 @@ const rechargeTiers = [
 
 function RechargeDialog({ onClose }: { onClose: () => void }) {
   const [selected, setSelected] = useState(3);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponStatus, setCouponStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; label: string; discount: number } | null>(null);
+
   const tier = rechargeTiers.find(t => t.id === selected)!;
+  const discount = appliedCoupon?.discount ?? 0;
+  const finalPrice = Math.max(0, tier.price - discount);
+
+  const handleApplyCoupon = () => {
+    if (!couponCode.trim()) return;
+    setCouponStatus("checking");
+    setTimeout(() => {
+      const coupon = validCoupons[couponCode.trim().toUpperCase()];
+      if (coupon) {
+        const discountAmount = coupon.type === "percent" ? Math.round(tier.price * coupon.value / 100) : coupon.value;
+        setAppliedCoupon({ code: couponCode.trim().toUpperCase(), label: coupon.label, discount: discountAmount });
+        setCouponStatus("valid");
+      } else {
+        setAppliedCoupon(null);
+        setCouponStatus("invalid");
+      }
+    }, 800);
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponStatus("idle");
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm" onClick={onClose}>
@@ -167,8 +204,46 @@ function RechargeDialog({ onClose }: { onClose: () => void }) {
           ))}
         </div>
 
+        {/* Coupon */}
+        <div className="mx-5 mt-0">
+          <div className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1"><Tag className="w-3 h-3" /> 优惠券</div>
+          {appliedCoupon ? (
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-brand-green/30 bg-brand-green/5">
+              <div className="flex items-center gap-2">
+                <Tag className="w-3.5 h-3.5 text-brand-green" />
+                <div>
+                  <div className="text-xs font-medium text-foreground">{appliedCoupon.code}</div>
+                  <div className="text-[10px] text-brand-green">{appliedCoupon.label} · 已优惠 ¥{appliedCoupon.discount.toLocaleString()}</div>
+                </div>
+              </div>
+              <button onClick={handleRemoveCoupon} className="text-muted-foreground hover:text-foreground transition-colors"><X className="w-4 h-4" /></button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                placeholder="输入优惠码"
+                value={couponCode}
+                onChange={e => { setCouponCode(e.target.value); if (couponStatus !== "idle") setCouponStatus("idle"); }}
+                onKeyDown={e => e.key === "Enter" && handleApplyCoupon()}
+                className="h-8 text-xs flex-1"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs shrink-0"
+                onClick={handleApplyCoupon}
+                disabled={!couponCode.trim() || couponStatus === "checking"}
+              >
+                {couponStatus === "checking" ? <Loader2 className="w-3 h-3 animate-spin" /> : "使用"}
+              </Button>
+            </div>
+          )}
+          {couponStatus === "invalid" && <p className="text-[10px] text-destructive mt-1">优惠码无效，请检查后重试</p>}
+          {couponStatus === "idle" && !appliedCoupon && <p className="text-[10px] text-muted-foreground mt-1">试试: CHARGE10, NEW50, VIP20</p>}
+        </div>
+
         {/* Summary */}
-        <div className="mx-5 p-3 rounded-lg bg-secondary/50 space-y-1.5">
+        <div className="mx-5 mt-3 p-3 rounded-lg bg-secondary/50 space-y-1.5">
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">支付金额</span>
             <span className="font-medium text-foreground">¥{tier.price.toLocaleString()}</span>
@@ -183,6 +258,12 @@ function RechargeDialog({ onClose }: { onClose: () => void }) {
               <span className="font-medium text-brand-green">+{tier.bonus.toLocaleString()}</span>
             </div>
           )}
+          {appliedCoupon && (
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-brand-green flex items-center gap-1"><Tag className="w-3 h-3" /> 优惠券减免</span>
+              <span className="font-medium text-brand-green">-¥{appliedCoupon.discount.toLocaleString()}</span>
+            </div>
+          )}
           <div className="border-t border-border pt-1.5 flex items-center justify-between text-xs">
             <span className="font-medium text-foreground">总计到账</span>
             <span className="font-display font-bold text-primary text-sm">{tier.points.toLocaleString()} 点数</span>
@@ -193,7 +274,7 @@ function RechargeDialog({ onClose }: { onClose: () => void }) {
         <div className="p-5 pt-4 flex gap-2">
           <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={onClose}>取消</Button>
           <Button size="sm" className="flex-1 text-xs gap-1" onClick={onClose}>
-            <CreditCard className="w-3.5 h-3.5" /> 立即支付 ¥{tier.price.toLocaleString()}
+            <CreditCard className="w-3.5 h-3.5" /> 立即支付 ¥{finalPrice.toLocaleString()}
           </Button>
         </div>
       </motion.div>
