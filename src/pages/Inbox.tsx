@@ -87,23 +87,90 @@ export default function Inbox() {
   const filteredInquiries = activeChannel === "全部" ? inquiries : inquiries.filter((m) => m.channel === activeChannel);
   const currentChat = selectedId ? (conversations[selectedId] || []) : [];
 
+  const abortRef = useRef<AbortController | null>(null);
+
   const generateAIReply = useCallback(async (inquiryId: number) => {
     const inquiry = inquiries.find((m) => m.id === inquiryId);
     if (!inquiry) return;
+
+    // Abort previous stream if any
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsGenerating(true);
-    setAiReply(null);
+    setAiReply("");
+    setAiConfidence(Math.floor(Math.random() * 10 + 85));
+
     try {
       const chatHistory = (conversations[inquiryId] || []).map((m) => ({ sender: m.sender, text: m.text }));
-      const { data, error } = await supabase.functions.invoke("generate-reply", {
-        body: { customerName: inquiry.name, company: inquiry.company, channel: inquiry.channel, messages: chatHistory, aiScore: inquiry.aiScore },
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-reply`;
+
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          customerName: inquiry.name,
+          company: inquiry.company,
+          channel: inquiry.channel,
+          messages: chatHistory,
+          aiScore: inquiry.aiScore,
+        }),
+        signal: controller.signal,
       });
-      if (error) throw error;
-      setAiReply(data.reply);
-      setAiConfidence(data.confidence || 90);
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || `请求失败 (${resp.status})`);
+      }
+
+      if (!resp.body) throw new Error("No response body");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              fullText += content;
+              setAiReply(fullText);
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      setIsGenerating(false);
     } catch (err: any) {
+      if (err.name === "AbortError") return;
       console.error("AI reply error:", err);
       toast({ title: "AI回复生成失败", description: err?.message || "请稍后重试", variant: "destructive" });
-    } finally {
+      setAiReply(null);
       setIsGenerating(false);
     }
   }, [conversations]);
@@ -345,44 +412,40 @@ export default function Inbox() {
               return null;
             })}
 
-            {/* AI Generating */}
-            {isGenerating && (
-              <div className="border border-primary/20 rounded-lg p-4 bg-primary/5 animate-pulse">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                  <span className="text-xs font-medium text-primary">AI正在分析{isEmail ? "邮件" : "询盘"}并生成回复建议...</span>
-                </div>
-                <div className="mt-2 space-y-2">
-                  <div className="h-3 bg-primary/10 rounded w-full" />
-                  <div className="h-3 bg-primary/10 rounded w-4/5" />
-                  <div className="h-3 bg-primary/10 rounded w-3/5" />
-                </div>
-              </div>
-            )}
-
-            {/* AI Reply */}
-            {!isGenerating && aiReply && (
+            {/* AI Reply - streaming or complete */}
+            {(isGenerating || (aiReply !== null && aiReply !== "")) && (
               <div className="border border-primary/20 rounded-lg p-3 bg-primary/5">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
-                    <Zap className="w-3 h-3 text-primary" />
-                    <span className="text-[10px] font-medium text-primary">AI建议回复</span>
+                    {isGenerating ? (
+                      <Loader2 className="w-3 h-3 text-primary animate-spin" />
+                    ) : (
+                      <Zap className="w-3 h-3 text-primary" />
+                    )}
+                    <span className="text-[10px] font-medium text-primary">
+                      {isGenerating ? "AI正在生成回复..." : "AI建议回复"}
+                    </span>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => generateAIReply(selectedId!)}
-                      className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1">
-                      <RefreshCw className="w-3 h-3" /> 重新生成
-                    </button>
-                    <button onClick={handleAdoptReply}
-                      className="text-[10px] bg-primary text-primary-foreground px-2 py-1 rounded hover:opacity-90 font-medium">采用此回复</button>
-                  </div>
+                  {!isGenerating && (
+                    <div className="flex gap-2">
+                      <button onClick={() => generateAIReply(selectedId!)}
+                        className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1">
+                        <RefreshCw className="w-3 h-3" /> 重新生成
+                      </button>
+                      <button onClick={handleAdoptReply}
+                        className="text-[10px] bg-primary text-primary-foreground px-2 py-1 rounded hover:opacity-90 font-medium">采用此回复</button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-[10px] text-muted-foreground">置信度</span>
-                  <Progress value={aiConfidence} className="h-1.5 flex-1" />
-                  <span className="text-[10px] font-medium text-primary">{aiConfidence}%</span>
+                  <Progress value={isGenerating ? 0 : aiConfidence} className="h-1.5 flex-1" />
+                  <span className="text-[10px] font-medium text-primary">{isGenerating ? "—" : `${aiConfidence}%`}</span>
                 </div>
-                <div className="text-[11px] text-muted-foreground whitespace-pre-wrap leading-relaxed">{aiReply}</div>
+                <div className="text-[11px] text-muted-foreground whitespace-pre-wrap leading-relaxed min-h-[2rem]">
+                  {aiReply || ""}
+                  {isGenerating && <span className="inline-block w-1.5 h-3.5 bg-primary/60 animate-pulse ml-0.5 align-text-bottom rounded-sm" />}
+                </div>
               </div>
             )}
           </div>

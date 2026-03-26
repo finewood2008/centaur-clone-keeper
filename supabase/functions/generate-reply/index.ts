@@ -49,6 +49,7 @@ serve(async (req) => {
           ...conversationMessages,
           { role: "user", content: "请根据以上对话历史，生成一条专业的回复建议。" },
         ],
+        stream: true,
       }),
     });
 
@@ -70,11 +71,8 @@ serve(async (req) => {
       });
     }
 
-    const data = await response.json();
-    const reply = data.choices?.[0]?.message?.content || "无法生成回复，请稍后重试。";
-
-    return new Response(JSON.stringify({ reply, confidence: Math.floor(Math.random() * 10 + 85) }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(response.body, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
     console.error("generate-reply error:", e);
