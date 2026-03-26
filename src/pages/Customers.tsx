@@ -406,6 +406,8 @@ export default function Customers() {
           </table>
         </div>
       </div>
+      </>
+      )}
 
       {/* Customer Detail Drawer */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
