@@ -72,6 +72,9 @@ const App = () => (
               <Route path="/data" element={<DataCenter />} />
               <Route path="/data/backup" element={<DataBackup />} />
               <Route path="/data/export" element={<DataExport />} />
+              <Route path="/billing" element={<BillingCenter />} />
+              <Route path="/billing/settings" element={<BillingSettings />} />
+              <Route path="/billing/invoice" element={<BillingInvoice />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
