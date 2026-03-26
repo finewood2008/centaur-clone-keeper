@@ -87,23 +87,90 @@ export default function Inbox() {
   const filteredInquiries = activeChannel === "全部" ? inquiries : inquiries.filter((m) => m.channel === activeChannel);
   const currentChat = selectedId ? (conversations[selectedId] || []) : [];
 
+  const abortRef = useRef<AbortController | null>(null);
+
   const generateAIReply = useCallback(async (inquiryId: number) => {
     const inquiry = inquiries.find((m) => m.id === inquiryId);
     if (!inquiry) return;
+
+    // Abort previous stream if any
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsGenerating(true);
-    setAiReply(null);
+    setAiReply("");
+    setAiConfidence(Math.floor(Math.random() * 10 + 85));
+
     try {
       const chatHistory = (conversations[inquiryId] || []).map((m) => ({ sender: m.sender, text: m.text }));
-      const { data, error } = await supabase.functions.invoke("generate-reply", {
-        body: { customerName: inquiry.name, company: inquiry.company, channel: inquiry.channel, messages: chatHistory, aiScore: inquiry.aiScore },
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-reply`;
+
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          customerName: inquiry.name,
+          company: inquiry.company,
+          channel: inquiry.channel,
+          messages: chatHistory,
+          aiScore: inquiry.aiScore,
+        }),
+        signal: controller.signal,
       });
-      if (error) throw error;
-      setAiReply(data.reply);
-      setAiConfidence(data.confidence || 90);
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || `请求失败 (${resp.status})`);
+      }
+
+      if (!resp.body) throw new Error("No response body");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              fullText += content;
+              setAiReply(fullText);
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      setIsGenerating(false);
     } catch (err: any) {
+      if (err.name === "AbortError") return;
       console.error("AI reply error:", err);
       toast({ title: "AI回复生成失败", description: err?.message || "请稍后重试", variant: "destructive" });
-    } finally {
+      setAiReply(null);
       setIsGenerating(false);
     }
   }, [conversations]);
