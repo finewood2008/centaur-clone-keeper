@@ -50,10 +50,11 @@ const initialDeals: KanbanDeal[] = [
   { id: "d10", name: "停产型号尾货", value: "$3,200", probability: 0, stage: "已关闭", customer: "Roberto Silva", company: "Brazil Imports", tier: "C" },
 ];
 
-export default function DealKanban() {
+export default function DealKanban({ onDealClick }: { onDealClick?: (deal: KanbanDeal) => void }) {
   const [deals, setDeals] = useState<KanbanDeal[]>(initialDeals);
   const dragItem = useRef<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const [highlightedDealId, setHighlightedDealId] = useState<string | null>(null);
 
   const handleDragStart = useCallback((dealId: string) => {
     dragItem.current = dealId;
@@ -148,7 +149,16 @@ export default function DealKanban() {
                     key={deal.id}
                     draggable
                     onDragStart={() => handleDragStart(deal.id)}
-                    className="bg-secondary/40 hover:bg-secondary/70 border border-border rounded-lg p-2.5 cursor-grab active:cursor-grabbing transition-all hover:shadow-sm group"
+                    onClick={() => {
+                      setHighlightedDealId(deal.id);
+                      onDealClick?.(deal);
+                    }}
+                    className={cn(
+                      "border rounded-lg p-2.5 cursor-grab active:cursor-grabbing transition-all hover:shadow-sm group",
+                      highlightedDealId === deal.id
+                        ? "bg-primary/10 border-primary ring-1 ring-primary/30"
+                        : "bg-secondary/40 hover:bg-secondary/70 border-border"
+                    )}
                   >
                     <div className="flex items-start gap-1.5">
                       <GripVertical className="w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground mt-0.5 flex-shrink-0" />
