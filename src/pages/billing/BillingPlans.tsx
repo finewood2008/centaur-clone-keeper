@@ -117,17 +117,53 @@ const featureLabels: Record<string, { label: string; category: string }> = {
 
 const categories = ["核心功能", "数据服务", "高级功能", "服务保障"];
 
+/* ─── Coupon data ─── */
+const validCoupons: Record<string, { label: string; type: "percent" | "fixed"; value: number }> = {
+  "VIP20": { label: "VIP专属优惠", type: "percent", value: 20 },
+  "NEW100": { label: "新用户立减", type: "fixed", value: 100 },
+  "YEAR500": { label: "年付专享", type: "fixed", value: 500 },
+  "SAVE10": { label: "限时折扣", type: "percent", value: 10 },
+};
+
 /* ─── Payment Dialog ─── */
 function PaymentDialog({ plan, yearly, onClose }: { plan: typeof plans[0]; yearly: boolean; onClose: () => void }) {
   const [payMethod, setPayMethod] = useState<"wechat" | "alipay">("wechat");
   const [step, setStep] = useState<"select" | "qr" | "success">("select");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponStatus, setCouponStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; label: string; discount: number } | null>(null);
+
   const price = yearly ? plan.yearlyPrice : plan.monthlyPrice;
-  const totalPrice = yearly ? price * 12 : price;
+  const baseTotal = yearly ? price * 12 : price;
+  const discount = appliedCoupon?.discount ?? 0;
+  const totalPrice = Math.max(0, baseTotal - discount);
   const Icon = plan.icon;
+
+  const handleApplyCoupon = () => {
+    if (!couponCode.trim()) return;
+    setCouponStatus("checking");
+    // Simulate async check
+    setTimeout(() => {
+      const coupon = validCoupons[couponCode.trim().toUpperCase()];
+      if (coupon) {
+        const discountAmount = coupon.type === "percent" ? Math.round(baseTotal * coupon.value / 100) : coupon.value;
+        setAppliedCoupon({ code: couponCode.trim().toUpperCase(), label: coupon.label, discount: discountAmount });
+        setCouponStatus("valid");
+      } else {
+        setAppliedCoupon(null);
+        setCouponStatus("invalid");
+      }
+    }, 800);
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponStatus("idle");
+  };
 
   const handlePay = () => {
     setStep("qr");
-    // Simulate payment completion
     setTimeout(() => setStep("success"), 3000);
   };
 
