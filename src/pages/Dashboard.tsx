@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [activities, setActivities] = useState(mockActivities);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [strategyDrawerOpen, setStrategyDrawerOpen] = useState(false);
+  const [responseDialogOpen, setResponseDialogOpen] = useState(false);
 
   // Simulate real-time refresh every 30s
   useEffect(() => {
