@@ -2,6 +2,7 @@
  * Customers - 客户管理 (本地化CRM)
  */
 import { useState } from "react";
+import CustomerDistributionMap from "@/components/customers/CustomerDistributionMap";
 import {
   Users, Search, Filter, Star, Globe, Mail, Phone,
   Building2, ArrowUpRight, MoreHorizontal, TrendingUp,
