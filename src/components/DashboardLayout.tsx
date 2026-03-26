@@ -7,7 +7,8 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Inbox, Share2, Megaphone, Mail,
   Users, Package, ChevronLeft, ChevronRight, Bell, Search,
-  Settings, Zap, Activity, Cpu, HardDrive,
+  Settings, Zap, Activity, Cpu, HardDrive, Database,
+  Archive, Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
