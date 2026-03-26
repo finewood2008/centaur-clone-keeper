@@ -330,7 +330,13 @@ export default function Customers() {
       </div>
 
       {activeView === "kanban" ? (
-        <DealKanban />
+        <DealKanban onDealClick={(deal) => {
+          const customer = customerList.find((c) => c.name === deal.customer);
+          if (customer) {
+            setSelectedCustomer(customer);
+            setDrawerOpen(true);
+          }
+        }} />
       ) : (
       <>
       {/* Customer Distribution Map */}
