@@ -116,8 +116,159 @@ const featureLabels: Record<string, { label: string; category: string }> = {
 
 const categories = ["核心功能", "数据服务", "高级功能", "服务保障"];
 
+/* ─── Payment Dialog ─── */
+function PaymentDialog({ plan, yearly, onClose }: { plan: typeof plans[0]; yearly: boolean; onClose: () => void }) {
+  const [payMethod, setPayMethod] = useState<"wechat" | "alipay">("wechat");
+  const [step, setStep] = useState<"select" | "qr" | "success">("select");
+  const price = yearly ? plan.yearlyPrice : plan.monthlyPrice;
+  const totalPrice = yearly ? price * 12 : price;
+  const Icon = plan.icon;
+
+  const handlePay = () => {
+    setStep("qr");
+    // Simulate payment completion
+    setTimeout(() => setStep("success"), 3000);
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm" onClick={onClose}>
+      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="w-full max-w-md bg-card border border-border rounded-xl shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        {step === "success" ? (
+          <div className="p-8 text-center">
+            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200 }}>
+              <div className="w-16 h-16 rounded-full bg-brand-green/15 flex items-center justify-center mx-auto mb-4">
+                <Check className="w-8 h-8 text-brand-green" />
+              </div>
+            </motion.div>
+            <h3 className="text-lg font-display font-bold text-foreground">支付成功</h3>
+            <p className="text-sm text-muted-foreground mt-2">已成功升级至 <span className="text-foreground font-medium">{plan.name}</span></p>
+            <p className="text-xs text-muted-foreground mt-1">新套餐功能已即时生效</p>
+            <Button size="sm" className="mt-6 text-xs" onClick={onClose}>完成</Button>
+          </div>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="p-5 pb-3 border-b border-border">
+              <h3 className="text-lg font-display font-bold text-foreground flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-primary" />
+                {step === "qr" ? "扫码支付" : "确认订单"}
+              </h3>
+            </div>
+
+            {step === "select" ? (
+              <>
+                {/* Order summary */}
+                <div className="p-5 space-y-4">
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: plan.color + "18" }}>
+                      <Icon className="w-5 h-5" style={{ color: plan.color }} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-foreground">{plan.name}</div>
+                      <div className="text-xs text-muted-foreground">{yearly ? "年付" : "月付"} · {plan.agents === -1 ? "无限" : plan.agents} Agent · {plan.storage} 存储</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-display font-bold text-foreground">¥{price}</div>
+                      <div className="text-[10px] text-muted-foreground">/月</div>
+                    </div>
+                  </div>
+
+                  {yearly && (
+                    <div className="flex items-center justify-between p-2.5 rounded-md bg-brand-green/8 text-xs">
+                      <span className="text-brand-green flex items-center gap-1"><Sparkles className="w-3 h-3" /> 年付优惠</span>
+                      <span className="text-brand-green font-medium">省 ¥{((plan.monthlyPrice - plan.yearlyPrice) * 12).toLocaleString()}/年</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between"><span className="text-muted-foreground">套餐单价</span><span className="text-foreground">¥{price}/月</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">购买时长</span><span className="text-foreground">{yearly ? "12 个月" : "1 个月"}</span></div>
+                    <div className="border-t border-border pt-1.5 flex justify-between font-medium">
+                      <span className="text-foreground">应付金额</span>
+                      <span className="text-primary text-base font-display">¥{totalPrice.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Payment method */}
+                  <div>
+                    <div className="text-xs font-medium text-muted-foreground mb-2">选择支付方式</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setPayMethod("wechat")}
+                        className={cn(
+                          "flex items-center gap-2.5 p-3 rounded-lg border transition-all",
+                          payMethod === "wechat"
+                            ? "border-brand-green bg-brand-green/5 ring-1 ring-brand-green/30"
+                            : "border-border hover:border-muted-foreground/30"
+                        )}
+                      >
+                        <div className="w-8 h-8 rounded-md bg-brand-green/15 flex items-center justify-center text-brand-green text-sm font-bold">微</div>
+                        <div className="text-left">
+                          <div className="text-xs font-medium text-foreground">微信支付</div>
+                          <div className="text-[10px] text-muted-foreground">推荐</div>
+                        </div>
+                        {payMethod === "wechat" && <Check className="w-4 h-4 text-brand-green ml-auto" />}
+                      </button>
+                      <button
+                        onClick={() => setPayMethod("alipay")}
+                        className={cn(
+                          "flex items-center gap-2.5 p-3 rounded-lg border transition-all",
+                          payMethod === "alipay"
+                            ? "border-[hsl(210,90%,55%)] bg-[hsl(210,90%,55%)]/5 ring-1 ring-[hsl(210,90%,55%)]/30"
+                            : "border-border hover:border-muted-foreground/30"
+                        )}
+                      >
+                        <div className="w-8 h-8 rounded-md bg-[hsl(210,90%,55%)]/15 flex items-center justify-center text-[hsl(210,90%,55%)] text-sm font-bold">支</div>
+                        <div className="text-left">
+                          <div className="text-xs font-medium text-foreground">支付宝</div>
+                          <div className="text-[10px] text-muted-foreground">扫码支付</div>
+                        </div>
+                        {payMethod === "alipay" && <Check className="w-4 h-4 text-[hsl(210,90%,55%)] ml-auto" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <Shield className="w-3 h-3" /> 支付由第三方安全通道加密处理，您的资金安全有保障
+                  </div>
+                </div>
+
+                <div className="p-5 pt-0 flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={onClose}>取消</Button>
+                  <Button size="sm" className="flex-1 text-xs" onClick={handlePay}>
+                    确认支付 ¥{totalPrice.toLocaleString()}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              /* QR code step */
+              <div className="p-5 text-center space-y-4">
+                <div className="text-xs text-muted-foreground">
+                  请使用 <span className="font-medium text-foreground">{payMethod === "wechat" ? "微信" : "支付宝"}</span> 扫描下方二维码完成支付
+                </div>
+                <div className="w-48 h-48 mx-auto rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center bg-secondary/30">
+                  <QrCode className="w-20 h-20 text-muted-foreground/40" />
+                  <span className="text-[10px] text-muted-foreground mt-2">模拟二维码</span>
+                </div>
+                <div className="text-lg font-display font-bold text-primary">¥{totalPrice.toLocaleString()}</div>
+                <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                  <Clock className="w-3 h-3 animate-spin" style={{ animationDuration: "3s" }} /> 等待支付中...
+                </div>
+                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setStep("select")}>
+                  返回选择
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function BillingPlans() {
   const [yearly, setYearly] = useState(false);
+  const [payingPlan, setPayingPlan] = useState<typeof plans[0] | null>(null);
 
   return (
     <div className="space-y-6">
