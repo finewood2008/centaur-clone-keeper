@@ -390,8 +390,11 @@ export default function BillingCenter() {
         </CardContent>
       </Card>
 
-      {/* Agent detail overlay */}
+      {/* Overlays */}
       {selectedAgent && <AgentDetail agent={selectedAgent} onClose={() => setSelectedAgent(null)} />}
+      <AnimatePresence>
+        {showRecharge && <RechargeDialog onClose={() => setShowRecharge(false)} />}
+      </AnimatePresence>
     </div>
   );
 }
