@@ -102,6 +102,8 @@ export default function Customers() {
   const [deals, setDeals] = useState(mockDeals);
   const [showAddDeal, setShowAddDeal] = useState(false);
   const [dealForm, setDealForm] = useState({ name: "", value: "", stage: "洽谈中", probability: 50 });
+  const [editingDealId, setEditingDealId] = useState<number | null>(null);
+  const [editDealForm, setEditDealForm] = useState({ stage: "", probability: 0 });
   const [customerList, setCustomerList] = useState<Customer[]>(customers);
   const [showImport, setShowImport] = useState(false);
   const [importPreview, setImportPreview] = useState<Customer[]>([]);
