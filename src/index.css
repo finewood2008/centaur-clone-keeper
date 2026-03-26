@@ -112,6 +112,12 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(230 10% 40%);
 }
+.light ::-webkit-scrollbar-thumb {
+  background: hsl(220 15% 75%);
+}
+.light ::-webkit-scrollbar-thumb:hover {
+  background: hsl(220 15% 65%);
+}
 
 .font-display {
   font-family: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
