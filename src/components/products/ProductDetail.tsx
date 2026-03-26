@@ -107,6 +107,9 @@ export default function ProductDetail({
             productMoq: product.moq,
             factoryName: product.factory,
             specs: product.specs.map((s) => `${s.label}: ${s.value}`).join(", "),
+            relatedProducts: relatedProducts.map((p) => ({
+              name: p.name, sku: p.sku, price: p.price, moq: p.moq, factory: p.factory,
+            })),
             messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
           },
         });
