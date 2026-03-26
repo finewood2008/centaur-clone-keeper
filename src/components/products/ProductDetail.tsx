@@ -185,6 +185,17 @@ export default function ProductDetail({
         });
       } finally {
         setIsStreaming(false);
+        // Attach related products if the query was about recommendations
+        if (isRecommendQuery(text) && relatedProducts.length > 0) {
+          setMessages((prev) => {
+            const updated = [...prev];
+            const last = updated[updated.length - 1];
+            if (last.role === "assistant") {
+              updated[updated.length - 1] = { ...last, recommendedProducts: relatedProducts };
+            }
+            return updated;
+          });
+        }
       }
     },
     [messages, isStreaming, product],
