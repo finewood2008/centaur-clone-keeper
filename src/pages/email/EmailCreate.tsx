@@ -295,6 +295,68 @@ Best regards,
           </div>
         </div>
       )}
+
+      {/* Email Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="font-display text-sm flex items-center justify-between">
+              <span>邮件预览</span>
+              <div className="flex items-center gap-1 bg-secondary rounded-lg p-0.5">
+                <button
+                  onClick={() => setPreviewDevice("desktop")}
+                  className={cn("flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] transition-colors",
+                    previewDevice === "desktop" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Monitor className="w-3.5 h-3.5" /> 桌面端
+                </button>
+                <button
+                  onClick={() => setPreviewDevice("mobile")}
+                  className={cn("flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] transition-colors",
+                    previewDevice === "mobile" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Smartphone className="w-3.5 h-3.5" /> 移动端
+                </button>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto flex justify-center py-4">
+            <div
+              className={cn(
+                "bg-white rounded-lg shadow-lg transition-all duration-300 overflow-hidden",
+                previewDevice === "desktop" ? "w-full max-w-[600px]" : "w-[375px]"
+              )}
+              style={previewDevice === "mobile" ? { borderRadius: 24, border: "6px solid hsl(var(--border))" } : {}}
+            >
+              {/* Email header */}
+              <div className="bg-[#f8f9fa] px-5 py-3 border-b border-[#e5e7eb]">
+                <div className="text-[11px] text-[#6b7280] space-y-0.5">
+                  <div><span className="font-medium text-[#374151]">From:</span> Alex Wang &lt;alex@opcled.com&gt;</div>
+                  <div><span className="font-medium text-[#374151]">To:</span> John Smith &lt;john@abccorp.com&gt;</div>
+                  <div><span className="font-medium text-[#374151]">Subject:</span> {subject || "(无主题)"}</div>
+                </div>
+              </div>
+              {/* Email body */}
+              <div className={cn("px-5 py-4 text-[#1f2937]", previewDevice === "desktop" ? "text-sm leading-relaxed" : "text-xs leading-relaxed")}>
+                {renderPreviewHtml().split("\n").map((line, i) => (
+                  <p key={i} className={line.trim() === "" ? "h-3" : ""}>{line}</p>
+                ))}
+              </div>
+              {/* Email footer */}
+              <div className="bg-[#f8f9fa] px-5 py-3 border-t border-[#e5e7eb] text-center">
+                <div className="text-[10px] text-[#9ca3af]">
+                  <span className="underline cursor-pointer hover:text-[#6b7280]">Unsubscribe</span>
+                  {" | "}
+                  <span className="underline cursor-pointer hover:text-[#6b7280]">Email Preferences</span>
+                </div>
+                <div className="text-[9px] text-[#d1d5db] mt-1">© 2026 OPC LED · Shenzhen, China</div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
