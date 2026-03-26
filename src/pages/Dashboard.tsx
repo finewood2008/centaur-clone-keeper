@@ -70,7 +70,7 @@ export default function Dashboard() {
   const handleCardClick = useCallback((card: string) => {
     switch (card) {
       case "inquiries":
-        navigate("/inbox");
+        setInquiryDialogOpen(true);
         break;
       case "automation":
         setStrategyDrawerOpen(true);
