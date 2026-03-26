@@ -202,6 +202,9 @@ export default function Customers() {
         ))}
       </div>
 
+      {/* Customer Distribution Map */}
+      <CustomerDistributionMap />
+
       {/* Search & Filter */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-xs">
