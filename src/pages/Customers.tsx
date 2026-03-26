@@ -99,6 +99,9 @@ export default function Customers() {
   const [showAddComm, setShowAddComm] = useState(false);
   const [communications, setCommunications] = useState(mockCommunications);
   const [commForm, setCommForm] = useState({ type: "email" as "email" | "chat" | "call" | "meeting" | "document", direction: "outbound" as "inbound" | "outbound", subject: "", summary: "" });
+  const [deals, setDeals] = useState(mockDeals);
+  const [showAddDeal, setShowAddDeal] = useState(false);
+  const [dealForm, setDealForm] = useState({ name: "", value: "", stage: "洽谈中", probability: 50 });
 
   const filtered = customers.filter((c) => {
     const tierMatch = selectedTier === "all" || c.tier === selectedTier;
@@ -525,11 +528,63 @@ export default function Customers() {
 
                 {/* Deals & Orders */}
                 <div className="p-4 border-b border-border">
-                  <h4 className="text-xs font-semibold mb-3 flex items-center gap-1">
-                    <DollarSign className="w-3.5 h-3.5 text-primary" /> 商机与订单
-                  </h4>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-xs font-semibold flex items-center gap-1">
+                      <DollarSign className="w-3.5 h-3.5 text-primary" /> 商机与订单
+                    </h4>
+                    <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => setShowAddDeal(!showAddDeal)}>
+                      <Plus className="w-3 h-3 mr-0.5" /> 新建商机
+                    </Button>
+                  </div>
+
+                  {showAddDeal && (
+                    <div className="mb-3 p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-2">
+                      <div className="text-[10px] font-semibold text-primary mb-1">新建商机</div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground">商机名称 *</label>
+                        <Input className="h-7 text-xs mt-0.5" value={dealForm.name} onChange={(e) => setDealForm({ ...dealForm, name: e.target.value })} placeholder="例如：LED灯泡500件订单" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-muted-foreground">金额</label>
+                          <Input className="h-7 text-xs mt-0.5" value={dealForm.value} onChange={(e) => setDealForm({ ...dealForm, value: e.target.value })} placeholder="$10,000" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-muted-foreground">阶段</label>
+                          <Select value={dealForm.stage} onValueChange={(v) => setDealForm({ ...dealForm, stage: v })}>
+                            <SelectTrigger className="h-7 text-xs mt-0.5"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="洽谈中">洽谈中</SelectItem>
+                              <SelectItem value="报价中">报价中</SelectItem>
+                              <SelectItem value="样品确认">样品确认</SelectItem>
+                              <SelectItem value="合同签署">合同签署</SelectItem>
+                              <SelectItem value="已成交">已成交</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground">成功率: {dealForm.probability}%</label>
+                        <input type="range" min={0} max={100} step={5} value={dealForm.probability} onChange={(e) => setDealForm({ ...dealForm, probability: Number(e.target.value) })} className="w-full h-1.5 mt-1 accent-primary" />
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddDeal(false)}>取消</Button>
+                        <Button size="sm" className="h-6 text-[10px]" onClick={() => {
+                          if (!dealForm.name.trim()) { toast.error("请填写商机名称"); return; }
+                          const newDeal = { id: Math.max(...deals.map(d => d.id), 0) + 1, name: dealForm.name, value: dealForm.value || "$0", stage: dealForm.stage, probability: dealForm.probability };
+                          setDeals([...deals, newDeal]);
+                          setDealForm({ name: "", value: "", stage: "洽谈中", probability: 50 });
+                          setShowAddDeal(false);
+                          toast.success("商机已创建", { description: `已保存到 ~/OPC/customers/${custId}/deals/` });
+                        }}>
+                          <Save className="w-3 h-3 mr-0.5" /> 保存
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
-                    {mockDeals.map((deal) => (
+                    {deals.map((deal) => (
                       <div key={deal.id} className="flex items-center gap-3 p-2 rounded-lg bg-secondary/20 text-xs">
                         <div className="flex-1">
                           <div className="font-medium">{deal.name}</div>
