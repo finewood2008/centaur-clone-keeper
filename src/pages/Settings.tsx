@@ -167,7 +167,7 @@ function SystemSection() {
         <div className="space-y-2">
           <SettingRow label="主题">
             <div className="flex gap-1.5">
-              {[{ k: "dark", l: "深色" }, { k: "light", l: "浅色" }, { k: "auto", l: "跟随系统" }].map((t) => (
+              {[{ k: "dark" as const, l: "深色" }, { k: "light" as const, l: "浅色" }, { k: "auto" as const, l: "跟随系统" }].map((t) => (
                 <button key={t.k} onClick={() => setTheme(t.k)} className={cn("text-[10px] px-2 py-1 rounded border transition-colors", theme === t.k ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground")}>{t.l}</button>
               ))}
             </div>
