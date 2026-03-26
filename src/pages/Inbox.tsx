@@ -201,16 +201,32 @@ export default function Inbox() {
   }, [aiReply, isEmail]);
 
   const handleSend = useCallback(() => {
-    if (!messageInput.trim() || !selectedId) return;
     const now = new Date();
     const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
-    setConversations((prev) => ({
-      ...prev,
-      [selectedId]: [...(prev[selectedId] || []), { id: Date.now(), sender: "user", time: timeStr, text: messageInput.trim() }],
-    }));
-    setMessageInput("");
-    toast({ title: "发送成功", description: selectedInquiry?.channel === "Email" ? "邮件已发送" : "消息已发送" });
-  }, [messageInput, selectedId, selectedInquiry]);
+
+    if (isEmail && emailEditorRef.current) {
+      const text = emailEditorRef.current.getText().trim();
+      if (!text || !selectedId) return;
+      const attachments = emailEditorRef.current.getAttachments();
+      setConversations((prev) => ({
+        ...prev,
+        [selectedId]: [...(prev[selectedId] || []), { id: Date.now(), sender: "user", time: timeStr, text }],
+      }));
+      emailEditorRef.current.clear();
+      toast({
+        title: "邮件已发送",
+        description: attachments.length > 0 ? `包含 ${attachments.length} 个附件` : "邮件回复已发送",
+      });
+    } else {
+      if (!messageInput.trim() || !selectedId) return;
+      setConversations((prev) => ({
+        ...prev,
+        [selectedId]: [...(prev[selectedId] || []), { id: Date.now(), sender: "user", time: timeStr, text: messageInput.trim() }],
+      }));
+      setMessageInput("");
+      toast({ title: "发送成功", description: "消息已发送" });
+    }
+  }, [messageInput, selectedId, isEmail]);
 
   const chCfg = selectedInquiry ? channelConfig[selectedInquiry.channel] : null;
 
