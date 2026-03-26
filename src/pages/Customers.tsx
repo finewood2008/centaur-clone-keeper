@@ -152,6 +152,33 @@ export default function Customers() {
     setEditForm({ ...editForm, tags: editForm.tags.filter((t) => t !== tag) });
   };
 
+  const addCommunication = () => {
+    if (!commForm.summary.trim()) {
+      toast.error("请填写沟通内容摘要");
+      return;
+    }
+    const now = new Date();
+    const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const newId = Math.max(...communications.map((c) => c.id), 0) + 1;
+    const typePrefix = commForm.type === "email" ? "email" : commForm.type === "chat" ? "chat" : commForm.type === "call" ? "call" : commForm.type === "meeting" ? "meeting" : "doc";
+    const newComm = {
+      id: newId,
+      type: commForm.type,
+      direction: commForm.direction,
+      time: timeStr,
+      summary: commForm.summary,
+      subject: commForm.subject,
+      filePath: `${typePrefix}-${String(newId).padStart(3, "0")}.json`,
+      hasAttachment: false,
+    };
+    setCommunications([newComm, ...communications]);
+    setCommForm({ type: "email", direction: "outbound", subject: "", summary: "" });
+    setShowAddComm(false);
+    toast.success("沟通记录已添加", {
+      description: `已保存到本地 ~/OPC/customers/${custId}/communications/${newComm.filePath}`,
+    });
+  };
+
   const custId = selectedCustomer ? `CUST-20240315-${String(selectedCustomer.id).padStart(3, "0")}` : "";
 
   return (
