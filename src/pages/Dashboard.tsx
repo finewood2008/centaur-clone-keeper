@@ -10,6 +10,7 @@ import StatsCards from "@/components/dashboard/StatsCards";
 import SourceChart from "@/components/dashboard/SourceChart";
 import IntentChart from "@/components/dashboard/IntentChart";
 import ActivityFeed, { mockActivities } from "@/components/dashboard/ActivityFeed";
+import AIStrategyDrawer from "@/components/dashboard/AIStrategyDrawer";
 
 const stagger = {
   hidden: { opacity: 0 },
