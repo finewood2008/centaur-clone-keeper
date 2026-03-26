@@ -7,8 +7,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Check, X, Crown, Zap, Star,
   Bot, HardDrive, Coins, Headphones, Sparkles,
-  CreditCard, QrCode, Shield, Clock,
+  CreditCard, QrCode, Shield, Clock, Tag, Loader2,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
