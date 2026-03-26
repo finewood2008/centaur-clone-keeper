@@ -106,6 +106,13 @@ function AgentDetail({ agent, onClose }: { agent: typeof agentConsumption[0]; on
   );
 }
 
+/* ─── Coupon data ─── */
+const validCoupons: Record<string, { label: string; type: "percent" | "fixed"; value: number }> = {
+  "CHARGE10": { label: "充值立减", type: "percent", value: 10 },
+  "NEW50": { label: "新用户优惠", type: "fixed", value: 50 },
+  "VIP20": { label: "VIP专属优惠", type: "percent", value: 20 },
+};
+
 /* ─── Recharge Dialog ─── */
 const rechargeTiers = [
   { id: 1, price: 100, points: 1000, bonus: 0 },
@@ -117,7 +124,35 @@ const rechargeTiers = [
 
 function RechargeDialog({ onClose }: { onClose: () => void }) {
   const [selected, setSelected] = useState(3);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponStatus, setCouponStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; label: string; discount: number } | null>(null);
+
   const tier = rechargeTiers.find(t => t.id === selected)!;
+  const discount = appliedCoupon?.discount ?? 0;
+  const finalPrice = Math.max(0, tier.price - discount);
+
+  const handleApplyCoupon = () => {
+    if (!couponCode.trim()) return;
+    setCouponStatus("checking");
+    setTimeout(() => {
+      const coupon = validCoupons[couponCode.trim().toUpperCase()];
+      if (coupon) {
+        const discountAmount = coupon.type === "percent" ? Math.round(tier.price * coupon.value / 100) : coupon.value;
+        setAppliedCoupon({ code: couponCode.trim().toUpperCase(), label: coupon.label, discount: discountAmount });
+        setCouponStatus("valid");
+      } else {
+        setAppliedCoupon(null);
+        setCouponStatus("invalid");
+      }
+    }, 800);
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponStatus("idle");
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm" onClick={onClose}>
