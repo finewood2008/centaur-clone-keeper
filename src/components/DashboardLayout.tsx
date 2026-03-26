@@ -24,14 +24,17 @@ interface NavItem {
 const mainNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: "控制台", href: "/", description: "业务监控中心" },
   { icon: Inbox, label: "询盘中心", href: "/inbox", badge: 12, description: "全渠道消息聚合" },
+  { icon: Package, label: "产品库", href: "/products", description: "产品目录与AI选品" },
   { icon: Share2, label: "社媒内容", href: "/social", description: "多平台内容生成" },
   { icon: Megaphone, label: "广告投放", href: "/ads", description: "跨平台广告管理" },
   { icon: Mail, label: "邮件营销", href: "/email", description: "AI开发信与自动序列" },
+  { icon: Users, label: "客户管理", href: "/customers", description: "360度客户画像" },
 ];
 
 const dataNavItems: NavItem[] = [
-  { icon: Users, label: "客户管理", href: "/customers", description: "360度客户画像" },
-  { icon: Package, label: "产品库", href: "/products", description: "产品目录与AI优化" },
+  { icon: Database, label: "数据中心", href: "/data", description: "数据安全与管理" },
+  { icon: Archive, label: "备份中心", href: "/data/backup", description: "自动备份与恢复" },
+  { icon: Download, label: "数据导出", href: "/data/export", description: "多格式数据导出" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
