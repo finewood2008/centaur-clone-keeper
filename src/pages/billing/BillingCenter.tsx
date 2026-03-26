@@ -2,10 +2,10 @@
  * 消费中心主页 - 本月消费概览 + Agent消费明细 + 趋势图 + 消费记录
  */
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Coins, TrendingUp, CreditCard, Settings, ChevronRight,
-  Bot, FileText, ArrowUpRight, Download,
+  Bot, FileText, ArrowUpRight, Download, Gift, Check, Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
