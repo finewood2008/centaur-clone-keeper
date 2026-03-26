@@ -57,6 +57,30 @@ export default function DealKanban({ onDealClick }: { onDealClick?: (deal: Kanba
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [highlightedDealId, setHighlightedDealId] = useState<string | null>(null);
 
+  // Filters
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [tierFilter, setTierFilter] = useState<Set<string>>(new Set(["A", "B", "C"]));
+  const [valueRange, setValueRange] = useState<[number, number]>([0, 50000]);
+
+  const parseValue = (v: string) => parseFloat(v.replace(/[$,]/g, "")) || 0;
+
+  const filteredDeals = useMemo(() => {
+    return deals.filter((d) => {
+      if (!tierFilter.has(d.tier)) return false;
+      const num = parseValue(d.value);
+      return num >= valueRange[0] && num <= valueRange[1];
+    });
+  }, [deals, tierFilter, valueRange]);
+
+  const toggleTier = (t: string) => {
+    setTierFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(t)) { if (next.size > 1) next.delete(t); }
+      else next.add(t);
+      return next;
+    });
+  };
+
   const handleDragStart = useCallback((dealId: string) => {
     dragItem.current = dealId;
   }, []);
@@ -85,7 +109,14 @@ export default function DealKanban({ onDealClick }: { onDealClick?: (deal: Kanba
     setDragOverStage(null);
   }, []);
 
-  const stageDeals = (stageKey: string) => deals.filter((d) => d.stage === stageKey);
+  const stageDeals = (stageKey: string) => filteredDeals.filter((d) => d.stage === stageKey);
+
+  const totalValue = (stageKey: string) => {
+    const sum = stageDeals(stageKey).reduce((acc, d) => acc + parseValue(d.value), 0);
+    return sum >= 1000 ? `$${(sum / 1000).toFixed(1)}K` : `$${sum}`;
+  };
+
+  const isFiltered = tierFilter.size < 3 || valueRange[0] > 0 || valueRange[1] < 50000;
 
   const totalValue = (stageKey: string) => {
     const sum = stageDeals(stageKey).reduce((acc, d) => {
