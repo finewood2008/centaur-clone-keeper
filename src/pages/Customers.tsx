@@ -99,6 +99,9 @@ export default function Customers() {
   const [showAddComm, setShowAddComm] = useState(false);
   const [communications, setCommunications] = useState(mockCommunications);
   const [commForm, setCommForm] = useState({ type: "email" as "email" | "chat" | "call" | "meeting" | "document", direction: "outbound" as "inbound" | "outbound", subject: "", summary: "" });
+  const [deals, setDeals] = useState(mockDeals);
+  const [showAddDeal, setShowAddDeal] = useState(false);
+  const [dealForm, setDealForm] = useState({ name: "", value: "", stage: "洽谈中", probability: 50 });
 
   const filtered = customers.filter((c) => {
     const tierMatch = selectedTier === "all" || c.tier === selectedTier;
