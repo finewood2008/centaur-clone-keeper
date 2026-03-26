@@ -73,9 +73,9 @@ export default function BillingSettings() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button size="sm" className="text-xs flex-1">升级套餐</Button>
-              <Button variant="outline" size="sm" className="text-xs flex-1">续费</Button>
-              <Button variant="outline" size="sm" className="text-xs flex-1">充值点数</Button>
+              <Button size="sm" className="text-xs flex-1" onClick={() => navigate("/billing/plans")}>升级套餐</Button>
+              <Button variant="outline" size="sm" className="text-xs flex-1" onClick={() => toast.success("续费功能即将上线")}>续费</Button>
+              <Button variant="outline" size="sm" className="text-xs flex-1" onClick={() => navigate("/billing")}>充值点数</Button>
             </div>
           </CardContent>
         </Card>
