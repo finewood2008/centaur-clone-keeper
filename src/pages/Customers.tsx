@@ -257,6 +257,10 @@ export default function Customers() {
           <p className="text-xs text-muted-foreground">Customer Agent · 360度客户画像与智能分级</p>
         </div>
         <div className="flex items-center gap-2">
+          <input type="file" ref={fileInputRef} accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileSelect} />
+          <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="w-3.5 h-3.5 mr-1" /> 批量导入
+          </Button>
           <Button size="sm" variant="outline" onClick={() => toast.success("客户数据已导出到 ~/OPC/exports/customers-2026-03-27.xlsx")}>
             <Download className="w-3.5 h-3.5 mr-1" /> 导出数据
           </Button>
