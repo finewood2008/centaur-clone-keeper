@@ -219,7 +219,7 @@ export default function BillingCenter() {
         <div className="flex gap-2">
           <Link to="/billing/settings"><Button variant="outline" size="sm" className="text-xs gap-1"><Settings className="w-3.5 h-3.5" /> 计费设置</Button></Link>
           <Link to="/billing/invoice"><Button variant="outline" size="sm" className="text-xs gap-1"><FileText className="w-3.5 h-3.5" /> 账单详情</Button></Link>
-          <Button size="sm" className="text-xs gap-1"><CreditCard className="w-3.5 h-3.5" /> 充值点数</Button>
+          <Button size="sm" className="text-xs gap-1" onClick={() => setShowRecharge(true)}><CreditCard className="w-3.5 h-3.5" /> 充值点数</Button>
         </div>
       </div>
 
