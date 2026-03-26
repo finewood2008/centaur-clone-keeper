@@ -50,10 +50,14 @@ const quickQuestions = [
 
 export default function ProductDetail({
   product,
+  allProducts = [],
   onBack,
+  onSelectProduct,
 }: {
   product: ProductInfo;
+  allProducts?: ProductInfo[];
   onBack: () => void;
+  onSelectProduct?: (p: ProductInfo) => void;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
