@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Inbox, Bot, Share2, Megaphone, Mail,
+  LayoutDashboard, Inbox, Share2, Megaphone, Mail,
   Users, Package, ChevronLeft, ChevronRight, Bell, Search,
   Settings, Zap, Activity, Cpu, HardDrive,
 } from "lucide-react";
@@ -21,9 +21,8 @@ interface NavItem {
 }
 
 const mainNavItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "控制台", href: "/", description: "全局数据概览" },
+  { icon: LayoutDashboard, label: "控制台", href: "/", description: "业务监控中心" },
   { icon: Inbox, label: "询盘中心", href: "/inbox", badge: 12, description: "全渠道消息聚合" },
-  { icon: Bot, label: "AI客服销售", href: "/ai-sales", badge: 3, description: "智能回复与销售管道" },
   { icon: Share2, label: "社媒内容", href: "/social", description: "多平台内容生成" },
   { icon: Megaphone, label: "广告投放", href: "/ads", description: "跨平台广告管理" },
   { icon: Mail, label: "邮件营销", href: "/email", description: "AI开发信与自动序列" },

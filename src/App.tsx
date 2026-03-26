@@ -8,7 +8,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import AIAssistant from "./components/AIAssistant";
 import Dashboard from "./pages/Dashboard";
 import Inbox from "./pages/Inbox";
-import AISales from "./pages/AISales";
+
 import SocialContent from "./pages/SocialContent";
 import AdsCommand from "./pages/AdsCommand";
 import EmailMarketing from "./pages/EmailMarketing";
@@ -29,7 +29,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/inbox" element={<Inbox />} />
-              <Route path="/ai-sales" element={<AISales />} />
+              
               <Route path="/social" element={<SocialContent />} />
               <Route path="/ads" element={<AdsCommand />} />
               <Route path="/email" element={<EmailMarketing />} />
