@@ -1,6 +1,6 @@
 /**
  * Dashboard - OPC超级工作台控制台
- * 统一业务监控中心：KPI卡片 + 来源/意图饼图 + 活动流
+ * Premium Dark Glassmorphism redesign
  */
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -40,7 +40,6 @@ export default function Dashboard() {
   const [satisfactionDialogOpen, setSatisfactionDialogOpen] = useState(false);
   const [inquiryDialogOpen, setInquiryDialogOpen] = useState(false);
 
-  // Simulate real-time refresh every 30s
   useEffect(() => {
     const interval = setInterval(() => {
       setStats((prev) => ({
@@ -52,7 +51,6 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  // Simulate new inquiry notification
   useEffect(() => {
     const names = ["David Lee", "Emma Brown", "Carlos Ruiz", "Yuki Tanaka"];
     const sources = ["WhatsApp", "Email", "LinkedIn"];
@@ -86,18 +84,19 @@ export default function Dashboard() {
 
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-5">
-      {/* Hero */}
-      <motion.div variants={fadeUp} className="relative rounded-xl overflow-hidden bg-gradient-to-r from-card via-card to-secondary border border-border p-5">
+      {/* Hero Banner with grid background */}
+      <motion.div variants={fadeUp} className="relative rounded-2xl overflow-hidden glass-panel p-6 hero-grid-bg">
         <div className="relative z-10">
-          <h1 className="font-display text-xl font-bold mb-1">OPC 超级工作台</h1>
-          <p className="text-xs text-muted-foreground">
+          <h1 className="font-display text-xl md:text-2xl font-bold mb-1.5 text-metallic">
+            OPC 超级工作台
+          </h1>
+          <p className="text-xs text-white/50">
             AI Agent 7×24小时运转 · 今日已自动处理{" "}
-            <span className="text-primary font-semibold">{stats.inquiries}</span> 条询盘，
+            <span className="text-primary font-bold text-sm">{stats.inquiries}</span> 条询盘，
             自动化率{" "}
-            <span className="text-brand-green font-semibold">{stats.automationRate}%</span>
+            <span className="text-brand-cyan font-bold text-sm">{stats.automationRate}%</span>
           </p>
         </div>
-        <div className="absolute top-0 right-0 w-1/3 h-full opacity-10 bg-gradient-to-l from-primary to-transparent" />
       </motion.div>
 
       {/* Stats Cards */}

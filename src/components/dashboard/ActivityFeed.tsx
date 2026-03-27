@@ -1,5 +1,5 @@
 /**
- * ActivityFeed - 最近活动流表格
+ * ActivityFeed - 最近活动流表格 (Glassmorphism)
  */
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -59,11 +59,11 @@ export default function ActivityFeed({ activities, selectedSource }: ActivityFee
     : activities;
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4">
+    <div className="glass-panel rounded-2xl p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="font-display font-semibold text-sm">最近活动流</h3>
-          <p className="text-[11px] text-muted-foreground">
+          <h3 className="font-display font-semibold text-sm text-foreground">最近活动流</h3>
+          <p className="text-[11px] text-white/35">
             实时询盘处理动态
             {selectedSource && <span className="text-primary ml-1">· 筛选: {selectedSource}</span>}
           </p>
@@ -72,7 +72,7 @@ export default function ActivityFeed({ activities, selectedSource }: ActivityFee
       </div>
 
       {/* Table header */}
-      <div className="grid grid-cols-[1fr_80px_80px_110px_80px_60px] gap-2 px-2 py-1.5 text-[10px] text-muted-foreground uppercase tracking-wider font-medium border-b border-border">
+      <div className="grid grid-cols-[1fr_80px_80px_110px_80px_60px] gap-2 px-2 py-1.5 text-[10px] text-white/25 uppercase tracking-wider font-medium border-b border-white/[0.06]">
         <span>客户</span>
         <span>类型</span>
         <span>来源</span>
@@ -82,45 +82,34 @@ export default function ActivityFeed({ activities, selectedSource }: ActivityFee
       </div>
 
       {/* Rows */}
-      <div className="divide-y divide-border/50">
+      <div className="divide-y divide-white/[0.04]">
         {filtered.map((activity) => {
           const status = statusConfig[activity.status];
           return (
             <div
               key={activity.id}
               className={cn(
-                "grid grid-cols-[1fr_80px_80px_110px_80px_60px] gap-2 px-2 py-2.5 items-center hover:bg-secondary/30 transition-colors rounded-md",
+                "grid grid-cols-[1fr_80px_80px_110px_80px_60px] gap-2 px-2 py-2.5 items-center hover:bg-white/[0.02] transition-colors rounded-md",
                 activity.status === "pending_review" && "bg-brand-orange/[0.03]"
               )}
             >
-              {/* Customer */}
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-[10px] font-semibold shrink-0">
+                <div className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] font-semibold shrink-0 text-white/60">
                   {activity.customer.avatar}
                 </div>
                 <span className="text-xs font-medium truncate">{activity.customer.name}</span>
               </div>
-
-              {/* Type */}
-              <span className={cn("text-[10px] px-1.5 py-0.5 rounded-md w-fit font-medium", typeColors[activity.type] || "bg-secondary text-muted-foreground")}>
+              <span className={cn("text-[10px] px-1.5 py-0.5 rounded-md w-fit font-medium", typeColors[activity.type] || "bg-white/[0.06] text-white/50")}>
                 {activity.type}
               </span>
-
-              {/* Source */}
               <div className="flex items-center gap-1.5">
                 {sourceIcons[activity.source]}
-                <span className="text-[10px] text-muted-foreground">{activity.source}</span>
+                <span className="text-[10px] text-white/40">{activity.source}</span>
               </div>
-
-              {/* Status */}
               <span className={cn("text-[10px] px-1.5 py-0.5 rounded-md w-fit font-medium flex items-center gap-1", status.className)}>
                 {status.emoji} {status.label}
               </span>
-
-              {/* Time */}
-              <span className="text-[10px] text-muted-foreground">{activity.time}</span>
-
-              {/* Action */}
+              <span className="text-[10px] text-white/35">{activity.time}</span>
               <Link to="/inbox" className="text-[10px] text-primary hover:underline">详情</Link>
             </div>
           );
@@ -128,7 +117,7 @@ export default function ActivityFeed({ activities, selectedSource }: ActivityFee
       </div>
 
       {filtered.length === 0 && (
-        <div className="py-8 text-center text-xs text-muted-foreground">暂无匹配的活动记录</div>
+        <div className="py-8 text-center text-xs text-white/30">暂无匹配的活动记录</div>
       )}
     </div>
   );

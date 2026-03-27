@@ -1,5 +1,5 @@
 /**
- * DashboardLayout - 战略沙盘新工业主义美学
+ * DashboardLayout - Premium Dark Glassmorphism
  * 桌面：左侧紧凑导航 + 顶部状态栏 + 主内容区
  * 移动：底部Tab导航 + 简化顶栏
  */
@@ -43,7 +43,6 @@ const dataNavItems: NavItem[] = [
   { icon: Coins, label: "消费中心", href: "/billing", description: "计费与点数管理" },
 ];
 
-// 移动端底部导航只显示核心5个
 const mobileTabItems: NavItem[] = [
   { icon: LayoutDashboard, label: "控制台", href: "/" },
   { icon: Inbox, label: "询盘", href: "/inbox", badge: 12 },
@@ -64,7 +63,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => clearInterval(timer);
   }, []);
 
-  // 路由变化时关闭移动端菜单
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
@@ -76,9 +74,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="flex flex-col h-screen overflow-hidden bg-background">
         {/* Mobile top bar */}
-        <header className="h-12 border-b border-border flex items-center justify-between px-3 shrink-0 bg-background">
+        <header className="h-12 border-b border-border/50 flex items-center justify-between px-3 shrink-0 glass-panel">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-primary/90 flex items-center justify-center glow-orange">
               <Zap className="w-3.5 h-3.5 text-primary-foreground" />
             </div>
             <span className="font-display font-semibold text-sm text-foreground">半人马AI（DEMO）</span>
@@ -87,7 +85,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <PointsStatusBar />
             <button className="w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground relative">
               <Bell className="w-4 h-4" />
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-orange" />
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-orange glow-orange" />
             </button>
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
@@ -95,11 +93,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Menu className="w-4 h-4" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[280px] p-0">
+              <SheetContent side="right" className="w-[280px] p-0 glass-panel-strong bg-background/80">
                 <SheetTitle className="sr-only">导航菜单</SheetTitle>
-                <div className="p-4 border-b border-border">
+                <div className="p-4 border-b border-border/50 brand-glow">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center glow-orange">
                       <Zap className="w-4 h-4 text-primary-foreground" />
                     </div>
                     <div>
@@ -118,11 +116,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         key={item.href}
                         to={item.href}
                         className={cn(
-                          "flex items-center gap-3 px-2 py-2.5 rounded-md text-sm transition-colors",
-                          active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                          "flex items-center gap-3 px-2 py-2.5 rounded-md text-sm transition-all relative",
+                          active ? "nav-active-bg text-foreground" : "text-white/50 hover:text-white/80 hover:bg-white/[0.03]"
                         )}
                       >
-                        <Icon className={cn("w-4 h-4", active && "text-primary")} />
+                        {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r bg-primary nav-glow-indicator" />}
+                        <Icon className={cn("w-4 h-4", active ? "text-primary" : "text-white/40")} />
                         <span className="text-xs font-medium">{item.label}</span>
                         {item.badge && (
                           <span className="ml-auto text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded font-medium">{item.badge}</span>
@@ -130,7 +129,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       </Link>
                     );
                   })}
-                  <div className="my-2 border-t border-border" />
+                  <div className="my-2 border-t border-white/[0.06]" />
                   <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 mb-1">数据中心</div>
                   {dataNavItems.map((item) => {
                     const Icon = item.icon;
@@ -140,21 +139,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         key={item.href}
                         to={item.href}
                         className={cn(
-                          "flex items-center gap-3 px-2 py-2.5 rounded-md text-sm transition-colors",
-                          active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                          "flex items-center gap-3 px-2 py-2.5 rounded-md text-sm transition-all relative",
+                          active ? "nav-active-bg text-foreground" : "text-white/50 hover:text-white/80 hover:bg-white/[0.03]"
                         )}
                       >
-                        <Icon className={cn("w-4 h-4", active && "text-primary")} />
+                        {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r bg-primary nav-glow-indicator" />}
+                        <Icon className={cn("w-4 h-4", active ? "text-primary" : "text-white/40")} />
                         <span className="text-xs font-medium">{item.label}</span>
                       </Link>
                     );
                   })}
-                  <div className="my-2 border-t border-border" />
+                  <div className="my-2 border-t border-white/[0.06]" />
                   <Link
                     to="/settings"
-                    className="flex items-center gap-3 px-2 py-2.5 rounded-md text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                    className="flex items-center gap-3 px-2 py-2.5 rounded-md text-sm text-white/50 hover:text-white/80 hover:bg-white/[0.03] transition-all"
                   >
-                    <Settings className="w-4 h-4" />
+                    <Settings className="w-4 h-4 text-white/40" />
                     <span className="text-xs font-medium">设置</span>
                   </Link>
                 </nav>
@@ -163,13 +163,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto p-3 pb-20">
           {children}
         </main>
 
         {/* Bottom tab bar */}
-        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-background border-t border-border flex items-center justify-around px-1 z-40 safe-area-pb">
+        <nav className="fixed bottom-0 left-0 right-0 h-16 glass-panel-strong flex items-center justify-around px-1 z-40 safe-area-pb">
           {mobileTabItems.map((item) => {
             const Icon = item.icon;
             const active = item.href === "/" ? location.pathname === "/" : location.pathname.startsWith(item.href);
@@ -179,23 +178,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 to={item.href}
                 className={cn(
                   "flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition-colors relative min-w-[48px]",
-                  active ? "text-primary" : "text-muted-foreground"
+                  active ? "text-primary" : "text-white/40"
                 )}
               >
                 <Icon className="w-5 h-5" />
                 <span className="text-[10px] font-medium">{item.label}</span>
                 {item.badge && (
-                  <span className="absolute -top-0.5 right-0 w-4 h-4 bg-primary text-primary-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
+                  <span className="absolute -top-0.5 right-0 w-4 h-4 bg-primary text-primary-foreground text-[9px] font-bold rounded-full flex items-center justify-center glow-orange">
                     {item.badge > 9 ? "9+" : item.badge}
                   </span>
                 )}
               </Link>
             );
           })}
-          {/* More button to open sheet */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg text-muted-foreground min-w-[48px]"
+            className="flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg text-white/40 min-w-[48px]"
           >
             <Menu className="w-5 h-5" />
             <span className="text-[10px] font-medium">更多</span>
@@ -210,17 +208,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
       <motion.aside
-        animate={{ width: collapsed ? 60 : 200 }}
+        animate={{ width: collapsed ? 60 : 210 }}
         transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
-        className="flex flex-col border-r border-sidebar-border bg-sidebar shrink-0 overflow-hidden"
+        className="flex flex-col border-r border-white/[0.06] bg-sidebar shrink-0 overflow-hidden"
       >
-        {/* Brand */}
-        <div className="flex items-center gap-2 px-3 h-14 border-b border-sidebar-border shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
+        {/* Brand with glow */}
+        <div className="relative flex items-center gap-2 px-3 h-14 border-b border-white/[0.06] shrink-0">
+          <div className="absolute inset-0 brand-glow opacity-60" />
+          <div className="relative w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 glow-orange">
             <Zap className="w-4 h-4 text-primary-foreground" />
           </div>
           {!collapsed && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="overflow-hidden">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="overflow-hidden relative">
               <div className="font-display font-semibold text-sm text-foreground whitespace-nowrap">半人马AI（DEMO）</div>
               <div className="text-[10px] text-muted-foreground whitespace-nowrap">外贸OPC超级工作台</div>
             </motion.div>
@@ -228,29 +227,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 py-2 overflow-y-auto">
-          <div className={cn("px-3 mb-1", collapsed && "px-0")}>
-            {!collapsed && <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 mb-1">核心模块</div>}
+        <nav className="flex-1 py-3 overflow-y-auto">
+          <div className={cn("px-2 mb-1", collapsed && "px-0")}>
+            {!collapsed && <div className="text-[9px] font-semibold text-white/30 uppercase tracking-[0.15em] px-2 mb-2">核心模块</div>}
             {mainNavItems.map((item) => (
               <NavLink key={item.href} item={item} active={item.href === "/" ? location.pathname === "/" : location.pathname.startsWith(item.href)} collapsed={collapsed} />
             ))}
           </div>
-          <div className="mx-3 my-2 border-t border-sidebar-border" />
-          <div className={cn("px-3", collapsed && "px-0")}>
-            {!collapsed && <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 mb-1">数据中心</div>}
+          <div className="mx-3 my-3 border-t border-white/[0.06]" />
+          <div className={cn("px-2", collapsed && "px-0")}>
+            {!collapsed && <div className="text-[9px] font-semibold text-white/30 uppercase tracking-[0.15em] px-2 mb-2">数据中心</div>}
             {dataNavItems.map((item) => (
               <NavLink key={item.href} item={item} active={item.href === "/data" ? location.pathname === "/data" : location.pathname.startsWith(item.href)} collapsed={collapsed} />
             ))}
           </div>
         </nav>
 
-        {/* Agent status panel */}
         <AgentStatusPanel collapsed={collapsed} />
 
-        {/* Collapse toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="h-10 flex items-center justify-center border-t border-sidebar-border text-muted-foreground hover:text-foreground transition-colors"
+          className="h-10 flex items-center justify-center border-t border-white/[0.06] text-white/30 hover:text-white/60 transition-colors"
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -259,35 +256,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="h-12 border-b border-border flex items-center justify-between px-4 shrink-0 bg-background">
+        <header className="h-12 border-b border-white/[0.06] flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
               <input
                 type="text"
                 placeholder="全局搜索..."
-                className="w-56 h-8 bg-secondary rounded-md pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/50"
+                className="search-glass w-56 h-8 rounded-lg pl-8 pr-3 text-xs text-foreground placeholder:text-white/30 outline-none"
               />
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <PointsStatusBar />
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
+            {/* Agent active pill */}
+            <div className="pill-badge">
               <div className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse-glow" />
-              <span>5 Agents Active</span>
+              <span className="text-white/60 font-mono">5 Agents</span>
             </div>
-            <div className="text-[11px] text-muted-foreground font-mono">{dateStr} {timeStr}</div>
-            <button className="w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors relative">
+            {/* Date pill */}
+            <div className="pill-badge">
+              <span className="text-white/50 font-mono">{dateStr} {timeStr}</span>
+            </div>
+            <button className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/[0.04] transition-all relative">
               <Bell className="w-4 h-4" />
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-orange" />
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-orange glow-orange" />
             </button>
-            <Link to="/settings" className="w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Link to="/settings" className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/[0.04] transition-all">
               <Settings className="w-4 h-4" />
             </Link>
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           {children}
         </main>
@@ -302,36 +302,39 @@ function NavLink({ item, active, collapsed }: { item: NavItem; active: boolean; 
     <Link
       to={item.href}
       className={cn(
-        "relative flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors group mb-0.5",
+        "relative flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-all group mb-0.5",
         active
-          ? "bg-sidebar-accent text-foreground"
-          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground",
+          ? "nav-active-bg text-foreground"
+          : "text-white/50 hover:text-white/80 hover:bg-white/[0.03]",
         collapsed && "justify-center px-0 mx-1"
       )}
     >
       {active && (
-        <motion.div layoutId="nav-indicator" className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-primary rounded-r" />
+        <motion.div
+          layoutId="nav-indicator"
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-5 bg-primary rounded-r nav-glow-indicator"
+        />
       )}
-      <Icon className={cn("w-4 h-4 shrink-0", active && "text-primary")} />
+      <Icon className={cn("w-4 h-4 shrink-0 transition-colors", active ? "text-primary" : "text-white/40 group-hover:text-white/60")} />
       {!collapsed && (
         <>
           <span className="text-xs font-medium truncate">{item.label}</span>
           {item.badge && (
-            <span className="ml-auto text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded font-medium">
+            <span className="ml-auto text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full font-semibold">
               {item.badge}
             </span>
           )}
         </>
       )}
       {collapsed && item.badge && (
-        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary text-primary-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
+        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary text-primary-foreground text-[9px] font-bold rounded-full flex items-center justify-center glow-orange">
           {item.badge > 9 ? "9+" : item.badge}
         </span>
       )}
       {collapsed && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-popover border border-border rounded-md shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap">
-          <div className="text-xs font-medium">{item.label}</div>
-          {item.description && <div className="text-[10px] text-muted-foreground">{item.description}</div>}
+        <div className="absolute left-full ml-2 px-2.5 py-1.5 glass-panel-strong rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap">
+          <div className="text-xs font-medium text-foreground">{item.label}</div>
+          {item.description && <div className="text-[10px] text-white/40">{item.description}</div>}
         </div>
       )}
     </Link>

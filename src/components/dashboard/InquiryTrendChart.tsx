@@ -1,5 +1,5 @@
 /**
- * InquiryTrendChart - 近7天询盘趋势折线图
+ * InquiryTrendChart - Premium Area Chart with glow lines
  */
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -19,48 +19,92 @@ export default function InquiryTrendChart() {
   const aiRate = ((totalAI / totalInquiries) * 100).toFixed(1);
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4">
+    <div className="glass-panel rounded-2xl p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="font-display font-semibold text-sm">询盘趋势</h3>
-          <p className="text-[11px] text-muted-foreground">近7日询盘量与AI处理量</p>
+          <h3 className="font-display font-semibold text-sm text-foreground">询盘趋势</h3>
+          <p className="text-[11px] text-white/35">近7日询盘量与AI处理量</p>
         </div>
         <div className="flex items-center gap-3 text-[10px]">
-          <span className="text-muted-foreground">
-            总计 <span className="text-foreground font-medium">{totalInquiries}</span>
+          <span className="pill-badge">
+            总计 <span className="text-foreground font-semibold">{totalInquiries}</span>
           </span>
-          <span className="text-muted-foreground">
-            AI处理率 <span className="text-brand-green font-medium">{aiRate}%</span>
+          <span className="pill-badge">
+            AI处理率 <span className="text-brand-green font-semibold">{aiRate}%</span>
           </span>
         </div>
       </div>
       <div className="flex gap-4 mb-3 text-[10px]">
         <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-primary" /> 总询盘
+          <span className="w-2 h-2 rounded-full bg-primary glow-orange" /> <span className="text-white/50">总询盘</span>
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-brand-cyan" /> AI处理
+          <span className="w-2 h-2 rounded-full bg-brand-cyan glow-cyan" /> <span className="text-white/50">AI处理</span>
         </span>
       </div>
       <ResponsiveContainer width="100%" height={200}>
         <AreaChart data={trendData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(230 10% 20%)" />
-          <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(230 10% 55%)" }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: "hsl(230 10% 55%)" }} axisLine={false} tickLine={false} />
+          <defs>
+            <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="hsl(30 90% 55%)" stopOpacity={0.25} />
+              <stop offset="100%" stopColor="hsl(30 90% 55%)" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="gradAI" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="hsl(190 80% 55%)" stopOpacity={0.2} />
+              <stop offset="100%" stopColor="hsl(190 80% 55%)" stopOpacity={0} />
+            </linearGradient>
+            <filter id="glowOrange">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id="glowCyan">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <CartesianGrid strokeDasharray="4 8" stroke="hsla(0,0%,100%,0.04)" vertical={false} />
+          <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsla(0,0%,100%,0.3)" }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 10, fill: "hsla(0,0%,100%,0.3)" }} axisLine={false} tickLine={false} />
           <Tooltip
             contentStyle={{
-              background: "hsl(230 12% 14%)",
-              border: "1px solid hsl(230 10% 23%)",
-              borderRadius: 8,
+              background: "hsla(225,15%,8%,0.9)",
+              backdropFilter: "blur(16px)",
+              border: "1px solid hsla(0,0%,100%,0.1)",
+              borderRadius: 12,
               fontSize: 11,
+              boxShadow: "0 8px 32px hsla(0,0%,0%,0.4)",
             }}
             formatter={(value: number, name: string) => [
               `${value}条`,
               name === "total" ? "总询盘" : "AI处理",
             ]}
           />
-          <Area type="monotone" dataKey="total" stroke="hsl(30 90% 55%)" fill="hsl(30 90% 55% / 0.15)" strokeWidth={2} />
-          <Area type="monotone" dataKey="ai" stroke="hsl(190 70% 50%)" fill="hsl(190 70% 50% / 0.1)" strokeWidth={2} />
+          <Area
+            type="monotone"
+            dataKey="total"
+            stroke="hsl(30 90% 55%)"
+            fill="url(#gradTotal)"
+            strokeWidth={2.5}
+            filter="url(#glowOrange)"
+            dot={false}
+            activeDot={{ r: 4, fill: "hsl(30 90% 55%)", stroke: "hsl(30 90% 65%)", strokeWidth: 2 }}
+          />
+          <Area
+            type="monotone"
+            dataKey="ai"
+            stroke="hsl(190 80% 55%)"
+            fill="url(#gradAI)"
+            strokeWidth={2.5}
+            filter="url(#glowCyan)"
+            dot={false}
+            activeDot={{ r: 4, fill: "hsl(190 80% 55%)", stroke: "hsl(190 80% 65%)", strokeWidth: 2 }}
+          />
         </AreaChart>
       </ResponsiveContainer>
     </div>
