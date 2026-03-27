@@ -17,6 +17,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import AgentStatusPanel from "./AgentStatusPanel";
 import PointsStatusBar from "./PointsStatusBar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import logoImg from "@/assets/logo.png";
 
 interface NavItem {
   icon: React.ElementType;
@@ -87,9 +88,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Mobile top bar */}
         <header className="h-12 border-b border-border/50 flex items-center justify-between px-3 shrink-0 glass-panel">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-primary/90 flex items-center justify-center glow-orange">
-              <Zap className="w-3.5 h-3.5 text-primary-foreground" />
-            </div>
+            <img src={logoImg} alt="半人马AI" className="w-7 h-7 object-contain" />
             <span className="font-display font-semibold text-sm text-foreground">半人马AI（DEMO）</span>
           </div>
           <div className="flex items-center gap-1">
@@ -108,9 +107,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <SheetTitle className="sr-only">导航菜单</SheetTitle>
                 <div className="p-4 border-b border-border/50 brand-glow">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center glow-orange">
-                      <Zap className="w-4 h-4 text-primary-foreground" />
-                    </div>
+                    <img src={logoImg} alt="半人马AI" className="w-8 h-8 object-contain" />
                     <div>
                       <div className="font-display font-semibold text-sm">半人马AI（DEMO）</div>
                       <div className="text-[10px] text-muted-foreground">外贸OPC超级工作台</div>
@@ -234,9 +231,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Brand with glow */}
         <div className="relative flex items-center gap-2 px-3 h-14 border-b border-white/[0.06] shrink-0">
           <div className="absolute inset-0 brand-glow opacity-60" />
-          <div className="relative w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 glow-orange">
-            <Zap className="w-4 h-4 text-primary-foreground" />
-          </div>
+          <img src={logoImg} alt="半人马AI" className="relative w-8 h-8 object-contain shrink-0" />
           {!collapsed && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="overflow-hidden relative">
               <div className="font-display font-semibold text-sm text-foreground whitespace-nowrap">半人马AI（DEMO）</div>
