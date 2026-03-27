@@ -3,7 +3,7 @@
  * 桌面：左侧紧凑导航 + 顶部状态栏 + 主内容区
  * 移动：底部Tab导航 + 简化顶栏
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Inbox, Share2, Megaphone, Mail,
@@ -57,6 +57,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [collapsed, setCollapsed] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const [sidebarGlow, setSidebarGlow] = useState({ x: 0, y: 0, visible: false });
+
+  const handleSidebarMouseMove = useCallback((e: React.MouseEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setSidebarGlow({ x: e.clientX - rect.left, y: e.clientY - rect.top, visible: true });
+  }, []);
+
+  const handleSidebarMouseLeave = useCallback(() => {
+    setSidebarGlow((prev) => ({ ...prev, visible: false }));
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -208,9 +219,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
       <motion.aside
+        ref={sidebarRef}
+        onMouseMove={handleSidebarMouseMove}
+        onMouseLeave={handleSidebarMouseLeave}
         animate={{ width: collapsed ? 60 : 210 }}
         transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
-        className="flex flex-col border-r border-white/[0.06] bg-sidebar shrink-0 overflow-hidden"
+        className="sidebar-glow-track flex flex-col border-r border-white/[0.06] bg-sidebar shrink-0 overflow-hidden relative"
+        style={{
+          '--glow-x': `${sidebarGlow.x}px`,
+          '--glow-y': `${sidebarGlow.y}px`,
+          '--glow-opacity': sidebarGlow.visible ? '1' : '0',
+        } as React.CSSProperties}
       >
         {/* Brand with glow */}
         <div className="relative flex items-center gap-2 px-3 h-14 border-b border-white/[0.06] shrink-0">

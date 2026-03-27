@@ -220,7 +220,23 @@
   background: linear-gradient(90deg, hsla(30 90% 55% / 0.08) 0%, hsla(30 90% 55% / 0.02) 100%);
 }
 
-/* Pill badge */
+/* Sidebar mouse-tracking glow */
+.sidebar-glow-track::after {
+  content: '';
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, hsla(30 90% 55% / 0.07) 0%, hsla(190 80% 55% / 0.04) 40%, transparent 70%);
+  left: var(--glow-x, 0px);
+  top: var(--glow-y, 0px);
+  transform: translate(-50%, -50%);
+  opacity: var(--glow-opacity, 0);
+  transition: opacity 0.3s ease;
+  z-index: 1;
+  mix-blend-mode: screen;
+}
 .pill-badge {
   @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium;
   background: hsla(0 0% 100% / 0.05);
