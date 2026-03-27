@@ -278,7 +278,7 @@ export default function Products() {
                 value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 overflow-x-auto">
               {categories.map((c) => (
                 <button key={c} onClick={() => setSelectedCategory(c)}
                   className={cn("text-xs px-2.5 py-1 rounded-md transition-colors",

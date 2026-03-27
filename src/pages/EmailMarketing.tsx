@@ -89,7 +89,7 @@ export default function EmailMarketing() {
                   <span className="text-[10px] text-muted-foreground">{typeLabels[c.type]}</span>
                 </div>
                 {c.sent > 0 && (
-                  <div className="flex gap-4 mt-2 text-[10px] text-muted-foreground">
+                  <div className="flex gap-3 md:gap-4 mt-2 text-[10px] text-muted-foreground flex-wrap">
                     <span className="flex items-center gap-1"><Send className="w-3 h-3" /> {c.sent} 发送</span>
                     <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {openRate}% 打开</span>
                     <span className="flex items-center gap-1"><MousePointerClick className="w-3 h-3" /> {c.clicked} 点击</span>
