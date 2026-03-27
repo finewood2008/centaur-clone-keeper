@@ -307,7 +307,7 @@ export default function BillingCenter() {
       {/* Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Plan card */}
-        <Card className="lg:col-span-2 bg-card border-border">
+        <Card className="lg:col-span-2 glass-panel border-border">
           <CardContent className="p-5">
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -337,7 +337,7 @@ export default function BillingCenter() {
         </Card>
 
         {/* Quick actions */}
-        <Card className="bg-card border-border">
+        <Card className="glass-panel border-border">
           <CardContent className="p-5 flex flex-col gap-3">
             <div className="text-xs font-medium text-muted-foreground">快速操作</div>
             {[

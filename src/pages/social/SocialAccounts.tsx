@@ -70,7 +70,7 @@ export default function SocialAccounts() {
       {accounts.map((account) => {
         const Icon = account.icon;
         return (
-          <div key={account.key} className="bg-card border border-border rounded-xl p-4">
+          <div key={account.key} className="glass-panel metric-card rounded-xl p-4">
             <div className="flex items-center gap-4">
               {/* Platform icon */}
               <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0", account.bgColor)}>

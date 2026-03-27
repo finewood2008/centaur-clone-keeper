@@ -61,16 +61,16 @@ export default function EmailMarketing() {
           { label: "回复率", value: "6.8%", sub: "43封回复" },
           { label: "退信率", value: "2.6%", sub: "低于行业水平" },
         ].map((kpi) => (
-          <div key={kpi.label} className="bg-card border border-border rounded-xl p-4">
+          <div key={kpi.label} className="glass-panel metric-card rounded-xl p-4">
             <div className="text-xs text-muted-foreground mb-1">{kpi.label}</div>
-            <div className="text-xl font-display font-bold">{kpi.value}</div>
+            <div className="text-xl font-metric font-bold">{kpi.value}</div>
             <div className="text-[10px] text-muted-foreground mt-1">{kpi.sub}</div>
           </div>
         ))}
       </div>
 
       {/* Campaign list */}
-      <div className="bg-card border border-border rounded-xl">
+      <div className="glass-panel rounded-xl">
         <div className="px-4 py-3 border-b border-border">
           <h3 className="font-display font-semibold text-sm">邮件活动</h3>
         </div>
@@ -80,7 +80,7 @@ export default function EmailMarketing() {
             const openRate = c.sent > 0 ? ((c.opened / c.sent) * 100).toFixed(1) : "0";
             const replyRate = c.sent > 0 ? ((c.replied / c.sent) * 100).toFixed(1) : "0";
             return (
-              <div key={c.id} className="p-4 hover:bg-secondary/30 transition-colors">
+              <div key={c.id} className="p-4 hover:bg-accent/30 transition-colors">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{c.name}</span>
@@ -103,7 +103,7 @@ export default function EmailMarketing() {
       </div>
 
       {/* Auto sequence */}
-      <div className="bg-card border border-border rounded-xl p-4">
+      <div className="glass-panel rounded-xl p-4">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-display font-semibold text-sm">自动化跟进序列</h3>

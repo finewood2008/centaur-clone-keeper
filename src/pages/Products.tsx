@@ -257,12 +257,12 @@ export default function Products() {
               { label: "总浏览量", value: "11.7K", sub: "↑ 28% 本月", icon: Eye },
               { label: "询盘转化", value: "225", sub: "转化率 1.9%", icon: Tag },
             ].map((s) => (
-              <div key={s.label} className="bg-card border border-border rounded-xl p-4">
+          <div key={s.label} className="glass-panel metric-card rounded-xl p-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs text-muted-foreground">{s.label}</span>
                   <s.icon className="w-3.5 h-3.5 text-muted-foreground" />
                 </div>
-                <div className="text-xl font-display font-bold">{s.value}</div>
+                <div className="text-xl font-metric font-bold">{s.value}</div>
                 <div className="text-[10px] text-muted-foreground mt-1">{s.sub}</div>
               </div>
             ))}
@@ -274,7 +274,7 @@ export default function Products() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <input
                 type="text" placeholder="搜索产品名称、SKU..."
-                className="w-full h-8 bg-secondary rounded-md pl-8 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-primary"
+                className="w-full h-8 search-glass rounded-md pl-8 pr-3 text-xs outline-none placeholder:text-muted-foreground"
                 value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
@@ -310,7 +310,7 @@ export default function Products() {
                 return (
                   <div
                     key={p.id}
-                    className="bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 transition-all cursor-pointer group"
+                    className="glass-panel metric-card rounded-xl overflow-hidden hover:border-primary/30 transition-all cursor-pointer group"
                     onClick={() => setSelectedProduct(p)}
                   >
                     <div className="relative h-36 bg-secondary">

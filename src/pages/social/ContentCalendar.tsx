@@ -192,7 +192,7 @@ export default function ContentCalendar() {
       {/* Calendar View - Full Month Grid */}
       {view === "calendar" && (
         <div className="space-y-3">
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="glass-panel rounded-xl overflow-hidden">
             {/* Month Header */}
             <div className="flex items-center justify-between p-3 border-b border-border">
               <button onClick={prevMonth} className="p-1 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
@@ -293,7 +293,7 @@ export default function ContentCalendar() {
 
           {/* Expanded day detail */}
           {expandedDate && postsByDate[expandedDate] && (
-            <div className="bg-card border border-border rounded-xl p-3 space-y-2">
+            <div className="glass-panel rounded-xl p-3 space-y-2">
               <h4 className="text-xs font-semibold">{formatDate(expandedDate)}</h4>
               {postsByDate[expandedDate].map((post) => {
                 const sc = statusConfig[post.status];

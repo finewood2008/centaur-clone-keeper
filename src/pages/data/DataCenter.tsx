@@ -1,6 +1,5 @@
 /**
  * DataCenter - 数据中心首页
- * 数据本地化 + 数据安全 + 数据主权
  */
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -43,18 +42,17 @@ const recentLogs = [
 export default function DataCenter() {
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div>
         <h2 className="font-display font-semibold text-lg">数据中心</h2>
         <p className="text-xs text-muted-foreground">数据本地化 · 完全可控 · 安全保障</p>
       </div>
 
       {/* Security Banner */}
-      <div className="rounded-xl border border-brand-green/30 bg-gradient-to-r from-brand-green/10 via-brand-green/5 to-transparent p-4">
+      <div className="rounded-xl glass-panel border-brand-green/30 bg-gradient-to-r from-brand-green/10 via-brand-green/5 to-transparent p-4 glow-green">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-lg bg-brand-green/20 flex items-center justify-center shrink-0">
-              <Lock className="w-4.5 h-4.5 text-brand-green" />
+              <Lock className="w-4 h-4 text-brand-green" />
             </div>
             <div>
               <div className="text-sm font-semibold flex items-center gap-1.5">
@@ -83,12 +81,12 @@ export default function DataCenter() {
           { icon: FileText, label: "文档资料", count: "892 个文件", size: "2.1 GB", path: "~/OPC/documents/" },
           { icon: ShoppingCart, label: "订单数据", count: "456 笔订单", size: "32.8 MB", path: "~/OPC/orders/" },
         ].map((d) => (
-          <div key={d.label} className="bg-card border border-border rounded-xl p-4">
+          <div key={d.label} className="glass-panel metric-card rounded-xl p-4">
             <div className="flex items-center justify-between mb-2">
               <d.icon className="w-4 h-4 text-muted-foreground" />
               <span className="text-[9px] text-muted-foreground font-mono">{d.size}</span>
             </div>
-            <div className="text-lg font-display font-bold">{d.count.split(" ")[0]}</div>
+            <div className="text-lg font-metric font-bold">{d.count.split(" ")[0]}</div>
             <div className="text-[10px] text-muted-foreground">{d.count.split(" ").slice(1).join(" ")}</div>
             <button
               className="mt-2 flex items-center gap-1 text-[9px] text-brand-cyan hover:underline font-mono"
@@ -126,7 +124,7 @@ export default function DataCenter() {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         {dataModules.map((m) => (
           <Link key={m.label} to={m.href} className="block">
-            <div className="bg-card border border-border rounded-xl p-4 hover:border-primary/30 transition-all group">
+            <div className="glass-panel metric-card rounded-xl p-4 hover:border-primary/30 transition-all group">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
                   <m.icon className={cn("w-4 h-4", m.color)} />
@@ -146,7 +144,7 @@ export default function DataCenter() {
       </div>
 
       {/* Security Log */}
-      <div className="bg-card border border-border rounded-xl p-4">
+      <div className="glass-panel rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-xs font-semibold flex items-center gap-1">
             <Clock className="w-3.5 h-3.5 text-primary" /> 数据安全日志

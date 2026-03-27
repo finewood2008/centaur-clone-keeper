@@ -276,7 +276,7 @@ export default function Customers() {
       </div>
 
       {/* Data Security Banner */}
-      <div className="rounded-xl border border-brand-green/30 bg-brand-green/5 px-4 py-3 flex items-center gap-5 flex-wrap">
+      <div className="rounded-xl glass-panel border-brand-green/30 bg-brand-green/5 px-4 py-3 flex items-center gap-5 flex-wrap glow-green">
         <div className="flex items-center gap-1.5 text-xs font-medium text-brand-green">
           <Lock className="w-3.5 h-3.5" /> 数据完全本地化
         </div>
@@ -301,9 +301,9 @@ export default function Customers() {
           { label: "客户总价值", value: "$1.2M", sub: "↑ 15% vs 上月" },
           { label: "平均AI评分", value: "67", sub: "/ 100" },
         ].map((s) => (
-          <div key={s.label} className="bg-card border border-border rounded-xl p-4">
+          <div key={s.label} className="glass-panel metric-card rounded-xl p-4">
             <div className="text-xs text-muted-foreground mb-1">{s.label}</div>
-            <div className="text-xl font-display font-bold">{s.value}</div>
+            <div className="text-xl font-metric font-bold">{s.value}</div>
             <div className="text-[10px] text-muted-foreground mt-1">{s.sub}</div>
           </div>
         ))}

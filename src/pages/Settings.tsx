@@ -1,5 +1,5 @@
 /**
- * Settings - 系统设置页面，包含账户、系统、AI配置、数据隐私、集成、团队、帮助、高级设置
+ * Settings - 系统设置页面
  */
 import { useState } from "react";
 import {
@@ -44,7 +44,7 @@ export default function Settings() {
       </div>
 
       <div className="flex flex-col md:flex-row gap-4">
-        {/* Left nav - horizontal scroll on mobile, vertical on desktop */}
+        {/* Left nav */}
         <div className="md:w-48 shrink-0">
           <div className="flex md:flex-col gap-1 overflow-x-auto pb-2 md:pb-0 md:space-y-0.5">
             {sections.map((s) => (
@@ -88,7 +88,7 @@ export default function Settings() {
 
 function SectionCard({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4 mb-4">
+    <div className="glass-panel rounded-lg p-4 mb-4">
       <div className="flex items-center gap-2 mb-3">
         <Icon className="w-4 h-4 text-primary" />
         <h3 className="text-sm font-semibold">{title}</h3>
@@ -283,7 +283,7 @@ function PrivacySection() {
       <SectionCard title="数据管理" icon={HardDrive}>
         <div className="flex flex-wrap gap-2">
           {["📤 导出所有数据", "💾 立即备份", "🔄 恢复数据", "🗑️ 清理缓存"].map((a) => (
-            <button key={a} onClick={() => toast.info("操作已触发")} className="text-[11px] px-3 py-1.5 rounded-md border border-border hover:bg-secondary transition-colors">{a}</button>
+            <button key={a} onClick={() => toast.info("操作已触发")} className="text-[11px] px-3 py-1.5 rounded-md glass-panel hover:bg-accent transition-colors">{a}</button>
           ))}
         </div>
       </SectionCard>
@@ -317,7 +317,7 @@ function IntegrationsSection() {
                 {item.connected ? (
                   <Badge variant="secondary" className="text-[10px] bg-brand-green/10 text-brand-green">✅ 已连接</Badge>
                 ) : (
-                  <button className="text-[10px] px-2 py-1 rounded border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">连接</button>
+                  <button className="text-[10px] px-2 py-1 rounded glass-panel text-muted-foreground hover:text-foreground transition-colors">连接</button>
                 )}
               </SettingRow>
             ))}
@@ -368,31 +368,27 @@ function TeamSection() {
 function HelpSection() {
   return (
     <>
-      <SectionCard title="使用指南" icon={BookOpen}>
-        <div className="space-y-2">
-          {["快速入门教程", "功能说明文档", "视频教程", "常见问题 FAQ"].map((item) => (
-            <button key={item} className="w-full flex items-center justify-between py-1.5 text-xs text-muted-foreground hover:text-foreground border-b border-border last:border-0 transition-colors">
-              {item}
-              <ExternalLink className="w-3 h-3" />
+      <SectionCard title="帮助资源" icon={HelpCircle}>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { icon: BookOpen, label: "使用文档", desc: "详细操作指南" },
+            { icon: Video, label: "视频教程", desc: "快速入门视频" },
+            { icon: MessageCircle, label: "在线客服", desc: "7×24小时" },
+            { icon: Mail, label: "邮件支持", desc: "support@opc.ai" },
+          ].map((h) => (
+            <button key={h.label} className="glass-panel rounded-lg p-3 text-left hover:bg-accent transition-colors">
+              <h.icon className="w-4 h-4 text-primary mb-1.5" />
+              <div className="text-xs font-medium">{h.label}</div>
+              <div className="text-[10px] text-muted-foreground">{h.desc}</div>
             </button>
           ))}
         </div>
       </SectionCard>
-      <SectionCard title="联系我们" icon={MessageCircle}>
-        <div className="space-y-2">
-          {["在线客服", "提交工单", "反馈建议", "加入社区"].map((item) => (
-            <button key={item} className="w-full flex items-center justify-between py-1.5 text-xs text-muted-foreground hover:text-foreground border-b border-border last:border-0 transition-colors">
-              {item}
-              <ChevronRight className="w-3 h-3" />
-            </button>
-          ))}
-        </div>
-      </SectionCard>
-      <SectionCard title="关于" icon={HelpCircle}>
-        <div className="space-y-2">
-          <SettingRow label="版本"><span className="text-xs font-mono">v1.2.3</span></SettingRow>
-          <SettingRow label="更新日志"><ChevronRight className="w-3 h-3 text-muted-foreground" /></SettingRow>
-        </div>
+      <SectionCard title="反馈与建议" icon={MessageSquare}>
+        <textarea placeholder="请描述您的问题或建议..." className="w-full bg-secondary rounded-lg px-3 py-2 text-xs outline-none resize-none h-20 placeholder:text-muted-foreground" />
+        <button className="mt-2 text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:opacity-90" onClick={() => toast.success("感谢您的反馈！")}>
+          提交反馈
+        </button>
       </SectionCard>
     </>
   );
@@ -402,29 +398,42 @@ function HelpSection() {
 function AdvancedSection() {
   return (
     <>
-      <SectionCard title="开发者选项" icon={Bug}>
-        <div className="space-y-2">
-          <SettingRow label="启用调试模式"><Checkbox defaultChecked /></SettingRow>
-          <SettingRow label="显示API日志"><Checkbox defaultChecked /></SettingRow>
-          <SettingRow label="性能分析工具"><Checkbox /></SettingRow>
-        </div>
-      </SectionCard>
       <SectionCard title="实验性功能" icon={FlaskConical}>
         <div className="space-y-2">
-          <SettingRow label="新版产品推荐算法"><Checkbox defaultChecked /></SettingRow>
-          <SettingRow label="多语言自动翻译"><Checkbox /></SettingRow>
-          <SettingRow label="语音交互"><Checkbox /></SettingRow>
+          <SettingRow label="多Agent协同模式" desc="允许多个Agent并行协作处理任务"><Switch /></SettingRow>
+          <SettingRow label="AI自动审核" desc="AI自动审核外发内容的合规性"><Switch defaultChecked /></SettingRow>
+          <SettingRow label="智能日程" desc="AI根据客户行为自动安排跟进"><Switch /></SettingRow>
+        </div>
+      </SectionCard>
+      <SectionCard title="开发者选项" icon={Bug}>
+        <div className="space-y-2">
+          <SettingRow label="调试模式"><Switch /></SettingRow>
+          <SettingRow label="API调用日志"><Switch /></SettingRow>
+          <SettingRow label="数据格式">
+            <Select defaultValue="json"><SelectTrigger className="w-24 h-7 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="json">JSON</SelectItem><SelectItem value="xml">XML</SelectItem></SelectContent></Select>
+          </SettingRow>
         </div>
       </SectionCard>
       <SectionCard title="危险操作" icon={AlertTriangle}>
-        <div className="space-y-2 pt-1">
-          {[
-            { label: "🗑️ 清空所有数据", danger: true },
-            { label: "🔄 重置为出厂设置", danger: true },
-            { label: "❌ 注销账户", danger: true },
-          ].map((a) => (
-            <button key={a.label} onClick={() => toast.error("该操作需要二次确认")} className="w-full text-left text-xs px-3 py-2 rounded-md border border-destructive/20 text-destructive hover:bg-destructive/10 transition-colors">{a.label}</button>
-          ))}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <div className="text-xs font-medium text-destructive">重置所有设置</div>
+              <div className="text-[10px] text-muted-foreground">恢复出厂设置，不影响数据</div>
+            </div>
+            <button onClick={() => toast.info("确认重置？请再次点击确认")} className="text-[10px] text-destructive border border-destructive/20 px-2 py-1 rounded hover:bg-destructive/5 transition-colors flex items-center gap-1">
+              <RotateCcw className="w-3 h-3" /> 重置
+            </button>
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <div className="text-xs font-medium text-destructive">删除账户</div>
+              <div className="text-[10px] text-muted-foreground">永久删除账户及所有数据</div>
+            </div>
+            <button onClick={() => toast.error("请联系管理员执行此操作")} className="text-[10px] text-destructive border border-destructive/20 px-2 py-1 rounded hover:bg-destructive/5 transition-colors flex items-center gap-1">
+              <Trash2 className="w-3 h-3" /> 删除
+            </button>
+          </div>
         </div>
       </SectionCard>
     </>

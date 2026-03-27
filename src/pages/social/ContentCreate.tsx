@@ -98,7 +98,7 @@ export default function ContentCreate() {
 
       {/* Step 1: Select media */}
       {step === 1 && (
-        <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+        <div className="glass-panel rounded-xl p-4 space-y-4">
           <div>
             <h3 className="text-sm font-semibold mb-1">从素材库选择图片/视频</h3>
             <p className="text-[11px] text-muted-foreground">最多选择9张，已选 {selectedImages.length}/9</p>
@@ -142,7 +142,7 @@ export default function ContentCreate() {
 
       {/* Step 2: AI caption */}
       {step === 2 && (
-        <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+        <div className="glass-panel rounded-xl p-4 space-y-4">
           <div>
             <h3 className="text-sm font-semibold mb-3">内容主题</h3>
             <div className="flex flex-wrap gap-2">
@@ -216,7 +216,7 @@ export default function ContentCreate() {
 
       {/* Step 3: Platform preview */}
       {step === 3 && (
-        <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+        <div className="glass-panel rounded-xl p-4 space-y-4">
           <h3 className="text-sm font-semibold">多平台预览</h3>
           <Tabs defaultValue="linkedin">
             <TabsList className="bg-secondary">
@@ -281,7 +281,7 @@ export default function ContentCreate() {
 
       {/* Step 4: Publish settings */}
       {step === 4 && (
-        <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+        <div className="glass-panel rounded-xl p-4 space-y-4">
           <h3 className="text-sm font-semibold">发布设置</h3>
 
           {/* Platform selection */}

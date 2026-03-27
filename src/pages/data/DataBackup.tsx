@@ -51,7 +51,7 @@ export default function DataBackup() {
       </div>
 
       {/* Backup Status Banner */}
-      <div className="rounded-xl border border-brand-green/30 bg-brand-green/5 px-4 py-3 flex items-center gap-3">
+      <div className="rounded-xl glass-panel border-brand-green/30 bg-brand-green/5 px-4 py-3 flex items-center gap-3 glow-green">
         <CheckCircle2 className="w-5 h-5 text-brand-green flex-shrink-0" />
         <div className="flex-1">
           <div className="text-xs font-medium">数据已备份且安全</div>
@@ -61,7 +61,7 @@ export default function DataBackup() {
       </div>
 
       {/* Current Data Status */}
-      <div className="bg-card border border-border rounded-xl p-4">
+      <div className="glass-panel rounded-xl p-4">
         <h4 className="text-xs font-semibold mb-3 flex items-center gap-1">
           <Database className="w-3.5 h-3.5 text-primary" /> 当前数据状态
         </h4>
@@ -69,7 +69,7 @@ export default function DataBackup() {
           {dataStatus.map((d) => (
             <div key={d.label} className="bg-secondary/30 rounded-lg p-3">
               <div className="text-[10px] text-muted-foreground">{d.label}</div>
-              <div className="text-sm font-bold mt-0.5">{d.count}</div>
+              <div className="text-sm font-metric font-bold mt-0.5">{d.count}</div>
               <div className="flex items-center justify-between mt-1">
                 <span className="text-[9px] text-muted-foreground">{d.size}</span>
                 <span className="text-[9px] text-brand-green flex items-center gap-0.5">
@@ -82,7 +82,7 @@ export default function DataBackup() {
       </div>
 
       {/* Auto Backup Settings */}
-      <div className="bg-card border border-border rounded-xl p-4">
+      <div className="glass-panel rounded-xl p-4">
         <h4 className="text-xs font-semibold mb-3 flex items-center gap-1">
           <Settings className="w-3.5 h-3.5 text-primary" /> 自动备份设置
         </h4>
@@ -133,18 +133,20 @@ export default function DataBackup() {
       </div>
 
       {isBackingUp && (
-        <div className="bg-card border border-primary/30 rounded-xl p-4">
+        <div className="glass-panel rounded-xl p-4 glow-orange">
           <div className="flex items-center gap-2 mb-2">
             <RefreshCw className="w-3.5 h-3.5 text-primary animate-spin" />
             <span className="text-xs font-medium">正在备份...</span>
           </div>
-          <Progress value={65} className="h-1.5" />
+          <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+            <div className="h-full neon-progress-bar rounded-full" style={{ width: "65%" }} />
+          </div>
           <div className="text-[10px] text-muted-foreground mt-1">正在压缩邮件数据... (2.8 GB / 4.3 GB)</div>
         </div>
       )}
 
       {/* Backup History */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="glass-panel rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border">
           <h4 className="text-xs font-semibold flex items-center gap-1">
             <Clock className="w-3.5 h-3.5 text-primary" /> 备份历史
@@ -165,7 +167,7 @@ export default function DataBackup() {
             </thead>
             <tbody className="divide-y divide-border">
               {backupHistory.map((b) => (
-                <tr key={b.id} className="hover:bg-secondary/20">
+                <tr key={b.id} className="hover:bg-accent/20">
                   <td className="px-4 py-2.5 font-mono text-muted-foreground">{b.time}</td>
                   <td className="px-4 py-2.5">{b.type}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">{b.size}</td>
