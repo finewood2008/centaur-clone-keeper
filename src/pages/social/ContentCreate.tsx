@@ -216,7 +216,7 @@ export default function ContentCreate() {
 
       {/* Step 3: Platform preview */}
       {step === 3 && (
-        <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+        <div className="glass-panel rounded-xl p-4 space-y-4">
           <h3 className="text-sm font-semibold">多平台预览</h3>
           <Tabs defaultValue="linkedin">
             <TabsList className="bg-secondary">
