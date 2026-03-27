@@ -274,7 +274,7 @@ export default function Products() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <input
                 type="text" placeholder="搜索产品名称、SKU..."
-                className="w-full h-8 bg-secondary rounded-md pl-8 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-primary"
+                className="w-full h-8 search-glass rounded-md pl-8 pr-3 text-xs outline-none placeholder:text-muted-foreground"
                 value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
