@@ -307,7 +307,7 @@ export default function BillingCenter() {
       {/* Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Plan card */}
-        <Card className="lg:col-span-2 bg-card border-border">
+        <Card className="lg:col-span-2 glass-panel border-border">
           <CardContent className="p-5">
             <div className="flex items-start justify-between mb-4">
               <div>
