@@ -119,7 +119,7 @@ export default function DataBackup() {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Button size="sm" className="text-xs gap-1" onClick={startBackup} disabled={isBackingUp}>
           {isBackingUp ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Archive className="w-3.5 h-3.5" />}
           {isBackingUp ? "备份中..." : "立即备份"}
