@@ -113,7 +113,7 @@ export default function AssetLibrary() {
           const isExpanded = expandedFolder === folder.name;
           const items = folderAssets(folder.name);
           return (
-            <div key={folder.name} className="bg-card border border-border rounded-xl overflow-hidden">
+            <div key={folder.name} className="glass-panel rounded-xl overflow-hidden">
               <button
                 onClick={() => setExpandedFolder(isExpanded ? null : folder.name)}
                 className="w-full flex items-center gap-3 p-3 hover:bg-secondary/30 transition-colors text-left"

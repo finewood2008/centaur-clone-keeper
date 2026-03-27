@@ -310,7 +310,7 @@ export default function Products() {
                 return (
                   <div
                     key={p.id}
-                    className="bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 transition-all cursor-pointer group"
+                    className="glass-panel metric-card rounded-xl overflow-hidden hover:border-primary/30 transition-all cursor-pointer group"
                     onClick={() => setSelectedProduct(p)}
                   >
                     <div className="relative h-36 bg-secondary">

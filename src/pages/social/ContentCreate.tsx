@@ -281,7 +281,7 @@ export default function ContentCreate() {
 
       {/* Step 4: Publish settings */}
       {step === 4 && (
-        <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+        <div className="glass-panel rounded-xl p-4 space-y-4">
           <h3 className="text-sm font-semibold">发布设置</h3>
 
           {/* Platform selection */}

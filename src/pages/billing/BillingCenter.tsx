@@ -337,7 +337,7 @@ export default function BillingCenter() {
         </Card>
 
         {/* Quick actions */}
-        <Card className="bg-card border-border">
+        <Card className="glass-panel border-border">
           <CardContent className="p-5 flex flex-col gap-3">
             <div className="text-xs font-medium text-muted-foreground">快速操作</div>
             {[

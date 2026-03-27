@@ -276,7 +276,7 @@ export default function Customers() {
       </div>
 
       {/* Data Security Banner */}
-      <div className="rounded-xl border border-brand-green/30 bg-brand-green/5 px-4 py-3 flex items-center gap-5 flex-wrap">
+      <div className="rounded-xl glass-panel border-brand-green/30 bg-brand-green/5 px-4 py-3 flex items-center gap-5 flex-wrap glow-green">
         <div className="flex items-center gap-1.5 text-xs font-medium text-brand-green">
           <Lock className="w-3.5 h-3.5" /> 数据完全本地化
         </div>

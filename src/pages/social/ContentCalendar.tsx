@@ -293,7 +293,7 @@ export default function ContentCalendar() {
 
           {/* Expanded day detail */}
           {expandedDate && postsByDate[expandedDate] && (
-            <div className="bg-card border border-border rounded-xl p-3 space-y-2">
+            <div className="glass-panel rounded-xl p-3 space-y-2">
               <h4 className="text-xs font-semibold">{formatDate(expandedDate)}</h4>
               {postsByDate[expandedDate].map((post) => {
                 const sc = statusConfig[post.status];
