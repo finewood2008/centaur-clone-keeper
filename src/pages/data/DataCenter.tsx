@@ -51,9 +51,9 @@ export default function DataCenter() {
 
       {/* Security Banner */}
       <div className="rounded-xl border border-brand-green/30 bg-gradient-to-r from-brand-green/10 via-brand-green/5 to-transparent p-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-brand-green/20 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-brand-green/20 flex items-center justify-center shrink-0">
               <Lock className="w-4.5 h-4.5 text-brand-green" />
             </div>
             <div>
@@ -64,7 +64,7 @@ export default function DataCenter() {
               <div className="text-[10px] text-muted-foreground">所有数据存储在您的本地电脑，完全由您掌控</div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
             {securityFeatures.map((f) => (
               <div key={f.label} className="flex items-center gap-1.5 text-[10px]">
                 <f.icon className="w-3 h-3 text-brand-green" />
@@ -72,9 +72,6 @@ export default function DataCenter() {
               </div>
             ))}
           </div>
-          <Button size="sm" variant="outline" className="text-xs h-7 gap-1 border-brand-green/30 text-brand-green hover:bg-brand-green/10">
-            <Shield className="w-3 h-3" /> 查看详细报告
-          </Button>
         </div>
       </div>
 
