@@ -343,13 +343,13 @@ export default function Customers() {
       <CustomerDistributionMap />
 
       {/* Search & Filter */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-xs">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div className="relative flex-1 sm:max-w-xs">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input placeholder="搜索客户名称、公司..." className="pl-8 h-8 text-xs" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
         </div>
         <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => toast("全文搜索将扫描所有本地沟通记录...")}>
-          <FolderOpen className="w-3 h-3 mr-1" /> 在本地文件中搜索
+          <FolderOpen className="w-3 h-3 mr-1" /> 本地搜索
         </Button>
       </div>
 
