@@ -755,33 +755,62 @@ Recommend the best local send time and weekday for this audience.`;
                         </div>
                         <div className="text-[10px] text-muted-foreground">{s.delay} · {s.condition}</div>
                       </div>
-                      {s.step > 1 && (
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 text-[10px] px-2"
-                            disabled={isThisGenerating || generatingSeqStep !== null}
-                            onClick={() => handleSequenceGenerate(s.step)}
-                          >
-                            {isThisGenerating ? (
-                              <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> 生成中</>
-                            ) : (
-                              <><Sparkles className="w-3 h-3 mr-1" /> {draft ? "重新生成" : "AI生成"}</>
-                            )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 text-[10px] px-2"
-                            disabled={!draft}
-                            onClick={() => openEditSequence(s.step)}
-                          >
-                            编辑
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex gap-1 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 text-[10px] px-2"
+                          disabled={recommendingTimeStep === s.step || recommendingTimeStep !== null}
+                          onClick={() => handleRecommendSendTime(s.step)}
+                          title="基于受众时区和 B2B 行业最佳实践推荐发送时间"
+                        >
+                          {recommendingTimeStep === s.step ? (
+                            <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> 推荐中</>
+                          ) : (
+                            <><Clock className="w-3 h-3 mr-1" /> AI推荐时机</>
+                          )}
+                        </Button>
+                        {s.step > 1 && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 text-[10px] px-2"
+                              disabled={isThisGenerating || generatingSeqStep !== null}
+                              onClick={() => handleSequenceGenerate(s.step)}
+                            >
+                              {isThisGenerating ? (
+                                <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> 生成中</>
+                              ) : (
+                                <><Sparkles className="w-3 h-3 mr-1" /> {draft ? "重新生成" : "AI生成"}</>
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 text-[10px] px-2"
+                              disabled={!draft}
+                              onClick={() => openEditSequence(s.step)}
+                            >
+                              编辑
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
+                    {/* AI 推荐发送时机 */}
+                    {sendTimeRecs[s.step] && (
+                      <div className="ml-10 flex items-start gap-2 text-[10px] p-1.5 rounded bg-primary/10 border border-primary/20">
+                        <Clock className="w-3 h-3 text-primary mt-0.5 shrink-0" />
+                        <div className="space-y-0.5">
+                          <div className="text-primary font-medium">
+                            建议 {sendTimeRecs[s.step].weekday} {sendTimeRecs[s.step].localTime}
+                            <span className="text-muted-foreground font-normal"> · {sendTimeRecs[s.step].tz}</span>
+                          </div>
+                          <div className="text-muted-foreground leading-snug">{sendTimeRecs[s.step].reason}</div>
+                        </div>
+                      </div>
+                    )}
                     {/* Inline preview of generated content */}
                     {s.step === 1 && subject && (
                       <div className="ml-10 text-[10px] space-y-0.5 text-muted-foreground">
