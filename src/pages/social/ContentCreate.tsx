@@ -256,31 +256,57 @@ export default function ContentCreate() {
             {isGenerating ? "AI生成中..." : "AI生成文案"}
           </button>
 
-          {caption && (
+          {(caption || isGenerating) && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold">AI 生成的多平台差异化文案（可分别编辑）</h3>
-                <span className="text-[10px] text-muted-foreground">3 个版本，针对各平台特性优化</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {streamingPlatform
+                    ? `正在生成 ${streamingPlatform.toUpperCase()} 版本…`
+                    : "3 个版本，针对各平台特性优化"}
+                </span>
               </div>
-              <Tabs defaultValue="linkedin">
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Platform)}>
                 <TabsList className="bg-secondary">
-                  <TabsTrigger value="linkedin" className="text-xs gap-1"><Linkedin className="w-3 h-3" /> LinkedIn</TabsTrigger>
-                  <TabsTrigger value="facebook" className="text-xs gap-1"><Facebook className="w-3 h-3" /> Facebook</TabsTrigger>
-                  <TabsTrigger value="instagram" className="text-xs gap-1"><Instagram className="w-3 h-3" /> Instagram</TabsTrigger>
+                  {PLATFORM_ORDER.map((p) => {
+                    const Icon = p === "linkedin" ? Linkedin : p === "facebook" ? Facebook : Instagram;
+                    return (
+                      <TabsTrigger key={p} value={p} className="text-xs gap-1 capitalize">
+                        <Icon className="w-3 h-3" />
+                        {p}
+                        {streamingPlatform === p && (
+                          <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                        )}
+                      </TabsTrigger>
+                    );
+                  })}
                 </TabsList>
-                {(["linkedin", "facebook", "instagram"] as const).map((p) => (
+                {PLATFORM_ORDER.map((p) => (
                   <TabsContent key={p} value={p} className="mt-3">
-                    <textarea
-                      value={platformCaptions[p] || ""}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setPlatformCaptions((prev) => ({ ...prev, [p]: v }));
-                        if (p === "linkedin") setCaption(v);
-                      }}
-                      className="w-full bg-secondary rounded-lg px-3 py-3 text-xs outline-none resize-none min-h-[200px] leading-relaxed"
-                    />
-                    <div className="text-[10px] text-muted-foreground mt-1">
-                      {(platformCaptions[p] || "").length} 字符
+                    <div className="relative">
+                      <textarea
+                        value={platformCaptions[p] || ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setPlatformCaptions((prev) => ({ ...prev, [p]: v }));
+                          if (p === "linkedin") setCaption(v);
+                        }}
+                        readOnly={streamingPlatform === p}
+                        placeholder={isGenerating && !platformCaptions[p] ? "等待生成…" : ""}
+                        className={cn(
+                          "w-full bg-secondary rounded-lg px-3 py-3 text-xs outline-none resize-none min-h-[200px] leading-relaxed",
+                          streamingPlatform === p && "cursor-default"
+                        )}
+                      />
+                      {streamingPlatform === p && (
+                        <span className="absolute bottom-3 right-3 inline-block w-1.5 h-3.5 bg-primary animate-pulse rounded-sm" />
+                      )}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-2">
+                      <span>{(platformCaptions[p] || "").length} 字符</span>
+                      {streamingPlatform === p && (
+                        <span className="text-primary animate-pulse">● 流式生成中</span>
+                      )}
                     </div>
                   </TabsContent>
                 ))}
