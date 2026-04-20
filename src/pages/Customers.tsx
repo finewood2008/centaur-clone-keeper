@@ -1,7 +1,7 @@
 /**
  * Customers - 客户管理 (本地化CRM)
  */
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import CustomerDistributionMap from "@/components/customers/CustomerDistributionMap";
 import DealKanban from "@/components/customers/DealKanban";
 import {
@@ -12,6 +12,7 @@ import {
   ChevronUp, ChevronRight, Sparkles, AlertTriangle,
   Video, FileJson, Folder, File as FileIcon, ExternalLink,
   Shield, X, Pencil, Save, Plus, Trash2, Upload, CheckCircle2, AlertCircle, Kanban,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -22,23 +23,71 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import ApiKeyBanner from "@/components/ApiKeyBanner";
+import {
+  useCustomers,
+  useCreateCustomer,
+  useUpdateCustomer,
+  useDeleteCustomer,
+} from "@/hooks/use-customers";
+import type { Customer as DbCustomer } from "@/hooks/use-customers";
 
-interface Customer {
-  id: number; name: string; company: string; country: string;
-  email: string; phone: string; tier: "A" | "B" | "C";
-  aiScore: number; totalOrders: number; totalValue: string;
-  lastContact: string; channels: string[]; status: "active" | "nurturing" | "cold";
-  tags?: string[];
+// UI 视图模型：把数据库字段映射成原页面用的字段名
+interface CustomerVM {
+  id: string;
+  name: string;
+  company: string;
+  country: string;
+  email: string;
+  phone: string;
+  tier: "A" | "B" | "C";
+  aiScore: number;
+  totalOrders: number;
+  totalValue: string; // 已格式化字符串，如 "$125,000"
+  lastContact: string; // 相对时间，如 "今天" / "3天前"
+  channels: string[];
+  status: "active" | "nurturing" | "cold";
+  tags: string[];
 }
 
-const customers: Customer[] = [
-  { id: 1, name: "John Smith", company: "TechCorp Ltd.", country: "美国", email: "john@techcorp.com", phone: "+1 555-0123", tier: "A", aiScore: 92, totalOrders: 8, totalValue: "$125,000", lastContact: "今天", channels: ["WhatsApp", "Email"], status: "active", tags: ["LED大客户", "长期合作"] },
-  { id: 2, name: "Maria Garcia", company: "EuroTrade GmbH", country: "德国", email: "maria@eurotrade.de", phone: "+49 30-12345", tier: "A", aiScore: 85, totalOrders: 5, totalValue: "$89,000", lastContact: "昨天", channels: ["LinkedIn", "Email"], status: "active", tags: ["欧洲分销", "价格敏感"] },
-  { id: 3, name: "Ahmed Hassan", company: "MidEast Import Co.", country: "阿联酋", email: "ahmed@mideast.ae", phone: "+971 50-1234", tier: "B", aiScore: 68, totalOrders: 3, totalValue: "$45,000", lastContact: "3天前", channels: ["WhatsApp"], status: "nurturing", tags: ["中东工程"] },
-  { id: 4, name: "Yuki Tanaka", company: "Japan Direct Co.", country: "日本", email: "yuki@japandirect.jp", phone: "+81 3-1234", tier: "B", aiScore: 55, totalOrders: 2, totalValue: "$28,000", lastContact: "1周前", channels: ["Email", "阿里巴巴"], status: "nurturing", tags: ["日本市场"] },
-  { id: 5, name: "Roberto Silva", company: "Brazil Imports", country: "巴西", email: "roberto@brazilimports.br", phone: "+55 11-1234", tier: "C", aiScore: 38, totalOrders: 1, totalValue: "$8,500", lastContact: "2周前", channels: ["WhatsApp"], status: "cold", tags: ["新客户"] },
-  { id: 6, name: "Sarah Johnson", company: "Pacific Trading Inc.", country: "澳大利亚", email: "sarah@pacific.au", phone: "+61 2-1234", tier: "B", aiScore: 62, totalOrders: 2, totalValue: "$32,000", lastContact: "5天前", channels: ["独立站", "Email"], status: "active", tags: ["太平洋区"] },
-];
+function formatMoney(n: number | null | undefined): string {
+  const v = Number(n ?? 0);
+  return `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
+function formatRelative(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diffMs = Date.now() - t;
+  const day = 86_400_000;
+  if (diffMs < 0) return "刚刚";
+  if (diffMs < day) return "今天";
+  if (diffMs < 2 * day) return "昨天";
+  if (diffMs < 7 * day) return `${Math.floor(diffMs / day)}天前`;
+  if (diffMs < 30 * day) return `${Math.floor(diffMs / (7 * day))}周前`;
+  if (diffMs < 365 * day) return `${Math.floor(diffMs / (30 * day))}个月前`;
+  return `${Math.floor(diffMs / (365 * day))}年前`;
+}
+
+function toVM(c: DbCustomer): CustomerVM {
+  return {
+    id: c.id,
+    name: c.name ?? "",
+    company: c.company ?? "",
+    country: c.country ?? "",
+    email: c.email ?? "",
+    phone: c.phone ?? "",
+    tier: ((c.tier ?? "C") as "A" | "B" | "C"),
+    aiScore: c.ai_score ?? 0,
+    totalOrders: c.total_orders ?? 0,
+    totalValue: formatMoney(Number(c.total_value ?? 0)),
+    lastContact: formatRelative(c.last_contact_at),
+    channels: c.channels ?? [],
+    status: ((c.status ?? "nurturing") as "active" | "nurturing" | "cold"),
+    tags: c.tags ?? [],
+  };
+}
+
 
 const tierColors: Record<string, string> = {
   A: "bg-primary/15 text-primary border-primary/30",
