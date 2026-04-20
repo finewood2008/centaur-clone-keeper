@@ -1,13 +1,14 @@
 /**
  * Products - 产品库（OPC核心选品模块）
  * 工厂直连 + AI机器人赋能选品
+ * 数据源：Supabase products + product_specs/images/docs
  */
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
-  Package, Search, Plus, Globe, DollarSign,
+  Package, Search, Plus, Globe,
   BarChart3, Eye, Layers, CheckCircle2, Tag,
-  MessageSquare, Bot, Factory, Star, Shield, Filter,
-  Share2, Trash2, ExternalLink, Copy, Users,
+  MessageSquare, Bot, Factory, Star, Filter,
+  Share2, Trash2, ExternalLink, Copy, Users, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -17,149 +18,75 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import ProductDetail from "@/components/products/ProductDetail";
 import ApiKeyBanner from "@/components/ApiKeyBanner";
+import { useProducts } from "@/hooks/use-products";
+import type { Product } from "@/hooks/use-products";
 
-interface Product {
-  id: number; name: string; category: string; sku: string;
-  price: string; moq: string; stock: string; image: string;
-  hasBot: boolean; views: number; inquiries: number;
-  factory: string; factoryRating: number; factoryCerts: string[];
-  specs: { label: string; value: string }[];
-  description: string;
-  docs: { name: string; size: string }[];
-  images: string[];
+const categories = ["全部", "LED照明", "太阳能", "钢管", "钢材", "手机配件", "家居用品", "家居装饰"];
+
+function formatPrice(p: number | null | undefined, currency: string | null | undefined = "USD"): string {
+  if (p == null) return "—";
+  const sym = currency === "USD" ? "$" : currency ? `${currency} ` : "$";
+  return `${sym}${Number(p).toFixed(2)}`;
 }
 
-const products: Product[] = [
-  {
-    id: 1, name: "LED Bulb A60 9W", category: "LED照明", sku: "LED-A60-9W",
-    price: "$1.85", moq: "1,000 pcs", stock: "50,000",
-    image: "https://images.unsplash.com/photo-1565814636199-ae8133055c1c?w=400&h=300&fit=crop",
-    hasBot: true, views: 2340, inquiries: 45,
-    factory: "明辉照明科技", factoryRating: 5, factoryCerts: ["ISO9001", "CE", "RoHS", "UL"],
-    specs: [
-      { label: "功率", value: "9W" }, { label: "色温", value: "2700K-6500K" },
-      { label: "光通量", value: "810lm" }, { label: "显色指数", value: "Ra>80" },
-      { label: "寿命", value: "25,000小时" }, { label: "调光", value: "支持PWM" },
-      { label: "输入电压", value: "AC100-240V" }, { label: "灯头", value: "E27/E26/B22" },
-    ],
-    description: "高品质LED灯泡，采用进口芯片，高光效低能耗。铝基板散热设计，寿命长达25000小时。支持2700K暖白至6500K冷白全色温范围，适用于家庭、商业、酒店照明。通过CE、RoHS、UL等国际认证，可根据客户需求定制外观、包装和标签。",
-    docs: [{ name: "产品规格书.pdf", size: "2.3MB" }, { name: "CE认证.pdf", size: "890KB" }, { name: "测试报告.pdf", size: "1.5MB" }],
-    images: [
-      "https://images.unsplash.com/photo-1565814636199-ae8133055c1c?w=600&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?w=600&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1493723843671-1d655e66ac1c?w=600&h=400&fit=crop",
-    ],
-  },
-  {
-    id: 2, name: "Solar Panel 400W Mono", category: "太阳能", sku: "SP-400W-M",
-    price: "$85.00", moq: "50 units", stock: "2,000",
-    image: "https://images.unsplash.com/photo-1509391366360-2e959784a276?w=400&h=300&fit=crop",
-    hasBot: true, views: 1890, inquiries: 32,
-    factory: "旭日新能源", factoryRating: 5, factoryCerts: ["TÜV", "IEC", "CE"],
-    specs: [
-      { label: "功率", value: "400W" }, { label: "电池类型", value: "单晶硅" },
-      { label: "效率", value: "21.3%" }, { label: "尺寸", value: "1755×1038×35mm" },
-      { label: "重量", value: "20.5kg" }, { label: "质保", value: "25年" },
-    ],
-    description: "高效单晶硅太阳能电池板，采用PERC技术，转换效率高达21.3%。半片电池设计减少热斑效应，提升系统可靠性。适用于分布式电站、屋顶光伏系统、工商业用电等场景。",
-    docs: [{ name: "产品数据手册.pdf", size: "3.1MB" }, { name: "IEC认证.pdf", size: "1.2MB" }],
-    images: [
-      "https://images.unsplash.com/photo-1509391366360-2e959784a276?w=600&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=600&h=400&fit=crop",
-    ],
-  },
-  {
-    id: 3, name: "Steel Pipe DN100", category: "钢材", sku: "STP-DN100",
-    price: "$12.50/m", moq: "10 tons", stock: "500 tons",
-    image: "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&h=300&fit=crop",
-    hasBot: false, views: 980, inquiries: 18,
-    factory: "鑫达钢铁", factoryRating: 4, factoryCerts: ["ISO9001", "API"],
-    specs: [
-      { label: "规格", value: "DN100" }, { label: "壁厚", value: "4.5mm" },
-      { label: "材质", value: "Q235B" }, { label: "长度", value: "6m/12m" },
-    ],
-    description: "优质碳钢无缝钢管，表面热镀锌处理，耐腐蚀性能优异。适用于给排水、天然气输送、建筑结构等领域。",
-    docs: [{ name: "材质报告.pdf", size: "780KB" }],
-    images: ["https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=600&h=400&fit=crop"],
-  },
-  {
-    id: 4, name: "Phone Case TPU Clear", category: "手机配件", sku: "PC-TPU-CLR",
-    price: "$0.35", moq: "5,000 pcs", stock: "200,000",
-    image: "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=400&h=300&fit=crop",
-    hasBot: true, views: 3200, inquiries: 67,
-    factory: "智联科技配件", factoryRating: 4, factoryCerts: ["SGS", "REACH"],
-    specs: [
-      { label: "材质", value: "TPU" }, { label: "硬度", value: "85A" },
-      { label: "厚度", value: "1.2mm" }, { label: "兼容", value: "iPhone/Samsung/Xiaomi" },
-    ],
-    description: "高透明TPU手机保护壳，防黄变处理，手感柔软防滑。精准开孔，完美贴合各品牌主流机型。支持定制logo印刷、颜色和包装。",
-    docs: [{ name: "SGS检测报告.pdf", size: "1.1MB" }],
-    images: [
-      "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=600&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1609081219090-a6d81d3085bf?w=600&h=400&fit=crop",
-    ],
-  },
-  {
-    id: 5, name: "Ceramic Tea Set 6pcs", category: "家居用品", sku: "CTS-6PCS",
-    price: "$8.50/set", moq: "200 sets", stock: "5,000",
-    image: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=300&fit=crop",
-    hasBot: true, views: 1560, inquiries: 28,
-    factory: "景瓷艺陶", factoryRating: 5, factoryCerts: ["FDA", "SGS", "LFGB"],
-    specs: [
-      { label: "材质", value: "高温陶瓷" }, { label: "套装", value: "1壶+4杯+1托盘" },
-      { label: "容量", value: "壶800ml/杯150ml" }, { label: "工艺", value: "手绘釉下彩" },
-    ],
-    description: "景德镇传统手工制作茶具套装，高温1300°C烧制，釉面光滑细腻。手绘釉下彩图案，每一件都是独特艺术品。适合作为商务礼品、家居装饰或出口。",
-    docs: [{ name: "FDA检测报告.pdf", size: "920KB" }],
-    images: [
-      "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=600&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1530968033775-2c92f0898d7c?w=600&h=400&fit=crop",
-    ],
-  },
-  {
-    id: 6, name: "LED Panel Light 600x600", category: "LED照明", sku: "LED-PL-600",
-    price: "$12.00", moq: "200 pcs", stock: "10,000",
-    image: "https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?w=400&h=300&fit=crop",
-    hasBot: true, views: 1780, inquiries: 35,
-    factory: "明辉照明科技", factoryRating: 5, factoryCerts: ["CE", "RoHS", "DLC"],
-    specs: [
-      { label: "功率", value: "40W" }, { label: "色温", value: "4000K/6000K" },
-      { label: "光通量", value: "4000lm" }, { label: "尺寸", value: "600×600×10mm" },
-      { label: "驱动", value: "恒流隔离" }, { label: "寿命", value: "50,000小时" },
-    ],
-    description: "超薄LED面板灯，厚度仅10mm，适用于办公室、医院、学校等集成吊顶安装。采用导光板技术，发光均匀无频闪，通过CE、DLC认证。",
-    docs: [{ name: "IES光学报告.pdf", size: "2.8MB" }, { name: "CE证书.pdf", size: "750KB" }],
-    images: ["https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?w=600&h=400&fit=crop"],
-  },
-];
-
-const categories = ["全部", "LED照明", "太阳能", "钢材", "手机配件", "家居用品"];
-
 export default function Products() {
+  const { data: products = [], isLoading } = useProducts();
+
   const [activeTab, setActiveTab] = useState<"library" | "my">("library");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("全部");
   const [botOnly, setBotOnly] = useState(false);
-  const [myProducts, setMyProducts] = useState<Product[]>([
-    products[0], products[1], products[4],
-  ]);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [myProductIds, setMyProductIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [shareNote, setShareNote] = useState("");
 
-  const filtered = products.filter((p) => {
-    const catMatch = selectedCategory === "全部" || p.category === selectedCategory;
-    const searchMatch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(searchQuery.toLowerCase());
-    const botMatch = !botOnly || p.hasBot;
-    return catMatch && searchMatch && botMatch;
-  });
+  // 默认把前 3 个产品作为"我的产品"示例
+  const myProducts = useMemo(
+    () => products.filter((p) => myProductIds.has(p.id) || (myProductIds.size === 0 && products.indexOf(p) < 3)),
+    [products, myProductIds]
+  );
 
-  const toggleSelect = (id: number) => {
+  const filtered = useMemo(
+    () =>
+      products.filter((p) => {
+        const catMatch = selectedCategory === "全部" || p.category === selectedCategory;
+        const searchMatch =
+          !searchQuery ||
+          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (p.sku ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+        const botMatch = !botOnly || !!p.has_bot;
+        return catMatch && searchMatch && botMatch;
+      }),
+    [products, selectedCategory, searchQuery, botOnly]
+  );
+
+  // 真实统计
+  const stats = useMemo(() => {
+    const total = products.length;
+    const withBot = products.filter((p) => p.has_bot).length;
+    const totalViews = products.reduce((s, p) => s + (p.views ?? 0), 0);
+    const totalInquiries = products.reduce((s, p) => s + (p.inquiries_count ?? 0), 0);
+    const conversion = totalViews > 0 ? ((totalInquiries / totalViews) * 100).toFixed(1) : "0.0";
+    const categoriesCount = new Set(products.map((p) => p.category).filter(Boolean)).size;
+    return {
+      total,
+      withBot,
+      botRate: total > 0 ? Math.round((withBot / total) * 100) : 0,
+      totalViews,
+      totalInquiries,
+      conversion,
+      categoriesCount,
+    };
+  }, [products]);
+
+  const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -173,14 +100,47 @@ export default function Products() {
   };
 
   const removeSelected = () => {
-    setMyProducts((prev) => prev.filter((p) => !selectedIds.has(p.id)));
+    setMyProductIds((prev) => {
+      const next = new Set(prev);
+      selectedIds.forEach((id) => next.delete(id));
+      // 如果当前展示的是默认 3 条但用户从未交互过，先把剩余的明确加进去再删
+      if (prev.size === 0) {
+        myProducts.forEach((p) => {
+          if (!selectedIds.has(p.id)) next.add(p.id);
+        });
+      }
+      return next;
+    });
     toast.success(`已移除 ${selectedIds.size} 个产品`);
     setSelectedIds(new Set());
   };
 
+  const addToMy = (id: string) => {
+    setMyProductIds((prev) => {
+      const next = new Set(prev);
+      // 首次添加时，先把默认显示的前 3 个固化进来
+      if (prev.size === 0) {
+        products.slice(0, 3).forEach((p) => next.add(p.id));
+      }
+      next.add(id);
+      return next;
+    });
+  };
+
+  const removeFromMy = (id: string) => {
+    setMyProductIds((prev) => {
+      const next = new Set(prev);
+      if (prev.size === 0) {
+        products.slice(0, 3).forEach((p) => next.add(p.id));
+      }
+      next.delete(id);
+      return next;
+    });
+  };
+
   const handleShare = () => {
     const shareProducts = myProducts.filter((p) => selectedIds.has(p.id));
-    const shareText = shareProducts.map((p) => `${p.name} (${p.sku}) - ${p.price}`).join("\n");
+    const shareText = shareProducts.map((p) => `${p.name} (${p.sku ?? ""}) - ${formatPrice(p.price, p.currency)}`).join("\n");
     navigator.clipboard.writeText(
       `📦 产品推荐清单\n${shareNote ? `备注: ${shareNote}\n` : ""}\n${shareText}\n\n查看详情: https://opc.com/share/${Date.now().toString(36)}`
     );
@@ -196,7 +156,8 @@ export default function Products() {
   if (selectedProduct) {
     return (
       <ProductDetail
-        product={selectedProduct}
+        productId={selectedProduct.id}
+        fallbackProduct={selectedProduct}
         allProducts={products}
         onBack={() => setSelectedProduct(null)}
         onSelectProduct={(p) => setSelectedProduct(p)}
@@ -254,12 +215,12 @@ export default function Products() {
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { label: "产品总数", value: "48", sub: "6个品类", icon: Package },
-              { label: "AI助手覆盖", value: "83%", sub: "40/48 产品", icon: Bot },
-              { label: "总浏览量", value: "11.7K", sub: "↑ 28% 本月", icon: Eye },
-              { label: "询盘转化", value: "225", sub: "转化率 1.9%", icon: Tag },
+              { label: "产品总数", value: String(stats.total), sub: `${stats.categoriesCount} 个品类`, icon: Package },
+              { label: "AI助手覆盖", value: `${stats.botRate}%`, sub: `${stats.withBot}/${stats.total} 产品`, icon: Bot },
+              { label: "总浏览量", value: stats.totalViews.toLocaleString(), sub: "累计访问", icon: Eye },
+              { label: "询盘转化", value: String(stats.totalInquiries), sub: `转化率 ${stats.conversion}%`, icon: Tag },
             ].map((s) => (
-          <div key={s.label} className="glass-panel metric-card rounded-xl p-4">
+              <div key={s.label} className="glass-panel metric-card rounded-xl p-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs text-muted-foreground">{s.label}</span>
                   <s.icon className="w-3.5 h-3.5 text-muted-foreground" />
@@ -304,8 +265,20 @@ export default function Products() {
             </div>
           </div>
 
-          {/* Product Grid */}
-          {viewMode === "grid" ? (
+          {/* Loading / Empty */}
+          {isLoading ? (
+            <div className="bg-card border border-border rounded-xl p-12 text-center">
+              <Loader2 className="w-5 h-5 animate-spin text-primary mx-auto mb-2" />
+              <div className="text-xs text-muted-foreground">加载产品库…</div>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="bg-card border border-border rounded-xl p-12 text-center">
+              <Package className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+              <div className="text-xs text-muted-foreground">
+                {products.length === 0 ? "暂无产品，点击「添加产品」开始" : "没有匹配的产品"}
+              </div>
+            </div>
+          ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map((p) => {
                 const isAdded = myProducts.some((mp) => mp.id === p.id);
@@ -316,8 +289,10 @@ export default function Products() {
                     onClick={() => setSelectedProduct(p)}
                   >
                     <div className="relative h-36 bg-secondary">
-                      <img src={p.image} alt={p.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                      {p.hasBot && (
+                      {p.image_url && (
+                        <img src={p.image_url} alt={p.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                      )}
+                      {p.has_bot && (
                         <span className="absolute top-2 right-2 text-[9px] bg-primary/90 text-primary-foreground px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                           <MessageSquare className="w-2.5 h-2.5" /> 产品助手
                         </span>
@@ -328,7 +303,7 @@ export default function Products() {
                         </span>
                       )}
                       <div className="absolute bottom-2 left-2 flex gap-1">
-                        {p.factoryCerts.slice(0, 3).map((c) => (
+                        {(p.factory_certs ?? []).slice(0, 3).map((c) => (
                           <span key={c} className="text-[8px] bg-card/80 backdrop-blur-sm px-1.5 py-0.5 rounded font-medium">
                             {c}
                           </span>
@@ -337,30 +312,30 @@ export default function Products() {
                     </div>
                     <div className="p-3">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] text-muted-foreground">{p.category}</span>
-                        <span className="text-[10px] text-muted-foreground font-mono">{p.sku}</span>
+                        <span className="text-[10px] text-muted-foreground">{p.category ?? ""}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{p.sku ?? ""}</span>
                       </div>
                       <h4 className="text-sm font-medium mb-1.5">{p.name}</h4>
                       <div className="flex items-center justify-between text-[11px] mb-2">
-                        <span className="font-bold text-primary text-sm">{p.price}</span>
-                        <span className="text-muted-foreground">MOQ: {p.moq}</span>
+                        <span className="font-bold text-primary text-sm">{formatPrice(p.price, p.currency)}</span>
+                        <span className="text-muted-foreground">MOQ: {p.moq ?? "—"}</span>
                       </div>
                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-2">
                         <Factory className="w-3 h-3" />
-                        <span>{p.factory}</span>
+                        <span>{p.factory_name ?? "—"}</span>
                         <span className="flex items-center gap-0.5 ml-auto">
-                          <Star className="w-2.5 h-2.5 text-primary fill-primary" /> {p.factoryRating}.0
+                          <Star className="w-2.5 h-2.5 text-primary fill-primary" /> {(p.factory_rating ?? 0).toFixed(1)}
                         </span>
                       </div>
                       <div className="flex items-center gap-3 text-[10px] text-muted-foreground border-t border-border pt-2">
-                        <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {p.views.toLocaleString()}</span>
-                        <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> {p.inquiries} 询盘</span>
+                        <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {(p.views ?? 0).toLocaleString()}</span>
+                        <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> {p.inquiries_count ?? 0} 询盘</span>
                         {!isAdded ? (
                           <button
                             className="flex items-center gap-1 text-primary ml-auto font-medium hover:underline"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setMyProducts((prev) => [...prev, p]);
+                              addToMy(p.id);
                               toast.success(`${p.name} 已加入我的产品`);
                             }}
                           >
@@ -397,25 +372,25 @@ export default function Products() {
                       <tr key={p.id} className="hover:bg-secondary/30 transition-colors cursor-pointer" onClick={() => setSelectedProduct(p)}>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <img src={p.image} alt={p.name} className="w-8 h-8 rounded object-cover" />
+                            {p.image_url && <img src={p.image_url} alt={p.name} className="w-8 h-8 rounded object-cover" />}
                             <div>
                               <div className="font-medium">{p.name}</div>
-                              <div className="text-[10px] text-muted-foreground">{p.category} · {p.sku}</div>
+                              <div className="text-[10px] text-muted-foreground">{p.category ?? ""} · {p.sku ?? ""}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">{p.factory}</td>
-                        <td className="px-4 py-3 font-medium text-primary">{p.price}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{p.moq}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{p.factory_name ?? "—"}</td>
+                        <td className="px-4 py-3 font-medium text-primary">{formatPrice(p.price, p.currency)}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{p.moq ?? "—"}</td>
                         <td className="px-4 py-3">
-                          {p.hasBot ? (
+                          {p.has_bot ? (
                             <span className="text-[10px] text-brand-green flex items-center gap-0.5"><Bot className="w-3 h-3" /> 在线</span>
                           ) : (
                             <span className="text-[10px] text-muted-foreground">未配置</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">{p.views.toLocaleString()}</td>
-                        <td className="px-4 py-3">{p.inquiries}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{(p.views ?? 0).toLocaleString()}</td>
+                        <td className="px-4 py-3">{p.inquiries_count ?? 0}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -430,10 +405,10 @@ export default function Products() {
           {/* My Products Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { label: "已选产品", value: String(myProducts.length), sub: `${new Set(myProducts.map(p => p.category)).size} 个品类`, icon: Package },
+              { label: "已选产品", value: String(myProducts.length), sub: `${new Set(myProducts.map(p => p.category).filter(Boolean)).size} 个品类`, icon: Package },
               { label: "累计分享", value: "36", sub: "↑ 12 本月", icon: Share2 },
               { label: "客户覆盖", value: "18", sub: "活跃客户", icon: Users },
-              { label: "AI助手", value: `${myProducts.filter(p => p.hasBot).length}/${myProducts.length}`, sub: "已配置比例", icon: Bot },
+              { label: "AI助手", value: `${myProducts.filter(p => p.has_bot).length}/${myProducts.length}`, sub: "已配置比例", icon: Bot },
             ].map((s) => (
               <div key={s.label} className="bg-card border border-border rounded-xl p-4">
                 <div className="flex items-center justify-between mb-1">
@@ -471,7 +446,7 @@ export default function Products() {
                 disabled={selectedIds.size === 0}
                 onClick={() => {
                   const selected = myProducts.filter((p) => selectedIds.has(p.id));
-                  const text = selected.map((p) => `${p.name},${p.sku},${p.price},${p.moq},${p.factory}`).join("\n");
+                  const text = selected.map((p) => `${p.name},${p.sku ?? ""},${formatPrice(p.price, p.currency)},${p.moq ?? ""},${p.factory_name ?? ""}`).join("\n");
                   navigator.clipboard.writeText(`产品名称,SKU,价格,MOQ,工厂\n${text}`);
                   toast.success("已复制为CSV格式");
                 }}
@@ -513,11 +488,13 @@ export default function Products() {
                     onCheckedChange={() => toggleSelect(p.id)}
                     className="data-[state=checked]:bg-primary flex-shrink-0"
                   />
-                  <img
-                    src={p.image} alt={p.name}
-                    className="w-14 h-14 rounded-lg object-cover flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
-                    onClick={() => setSelectedProduct(p)}
-                  />
+                  {p.image_url && (
+                    <img
+                      src={p.image_url} alt={p.name}
+                      className="w-14 h-14 rounded-lg object-cover flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                      onClick={() => setSelectedProduct(p)}
+                    />
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h4
@@ -526,33 +503,33 @@ export default function Products() {
                       >
                         {p.name}
                       </h4>
-                      {p.hasBot && (
+                      {p.has_bot && (
                         <Badge variant="outline" className="text-[8px] h-4 px-1 gap-0.5 flex-shrink-0">
                           <Bot className="w-2 h-2" /> AI
                         </Badge>
                       )}
                     </div>
                     <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-0.5">
-                      <span className="font-mono">{p.sku}</span>
-                      <span>{p.category}</span>
-                      <span className="flex items-center gap-0.5"><Factory className="w-2.5 h-2.5" /> {p.factory}</span>
+                      <span className="font-mono">{p.sku ?? ""}</span>
+                      <span>{p.category ?? ""}</span>
+                      <span className="flex items-center gap-0.5"><Factory className="w-2.5 h-2.5" /> {p.factory_name ?? "—"}</span>
                     </div>
                     <div className="flex items-center gap-1 mt-1">
-                      {p.factoryCerts.slice(0, 3).map((c) => (
+                      {(p.factory_certs ?? []).slice(0, 3).map((c) => (
                         <span key={c} className="text-[8px] bg-secondary px-1 py-0.5 rounded">{c}</span>
                       ))}
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="text-sm font-bold text-primary">{p.price}</div>
-                    <div className="text-[10px] text-muted-foreground">MOQ: {p.moq}</div>
+                    <div className="text-sm font-bold text-primary">{formatPrice(p.price, p.currency)}</div>
+                    <div className="text-[10px] text-muted-foreground">MOQ: {p.moq ?? "—"}</div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <Button
                       size="sm" variant="ghost" className="h-7 w-7 p-0"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigator.clipboard.writeText(`https://opc.com/product/${p.sku}`);
+                        navigator.clipboard.writeText(`https://opc.com/product/${p.sku ?? p.id}`);
                         toast.success(`${p.name} 链接已复制`);
                       }}
                     >
@@ -562,7 +539,7 @@ export default function Products() {
                       size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setMyProducts((prev) => prev.filter((mp) => mp.id !== p.id));
+                        removeFromMy(p.id);
                         setSelectedIds((prev) => { const n = new Set(prev); n.delete(p.id); return n; });
                         toast.success(`已移除 ${p.name}`);
                       }}
@@ -595,9 +572,9 @@ export default function Products() {
                 <div className="space-y-1.5 max-h-40 overflow-y-auto">
                   {myProducts.filter((p) => selectedIds.has(p.id)).map((p) => (
                     <div key={p.id} className="flex items-center gap-2 text-xs">
-                      <img src={p.image} alt="" className="w-6 h-6 rounded object-cover" />
+                      {p.image_url && <img src={p.image_url} alt="" className="w-6 h-6 rounded object-cover" />}
                       <span className="flex-1 truncate">{p.name}</span>
-                      <span className="text-primary font-medium">{p.price}</span>
+                      <span className="text-primary font-medium">{formatPrice(p.price, p.currency)}</span>
                     </div>
                   ))}
                 </div>

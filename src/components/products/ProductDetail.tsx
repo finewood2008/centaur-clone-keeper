@@ -1,10 +1,11 @@
 /**
  * ProductDetail - 产品详情页（60/40分屏：产品信息 + AI产品助手）
+ * 数据源：useProductWithDetails（products + product_specs + product_images + product_docs）
  */
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   ArrowLeft, MessageSquare, Send, Bot, Star, Shield,
-  FileText, Download, Package, Factory, Clock, CheckCircle2,
+  FileText, Download, Package, Factory, CheckCircle2,
   ClipboardList, Share2, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -12,33 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-
-interface ProductInfo {
-  id: number;
-  name: string;
-  category: string;
-  sku: string;
-  price: string;
-  moq: string;
-  stock: string;
-  image: string;
-  hasBot: boolean;
-  views: number;
-  inquiries: number;
-  factory: string;
-  factoryRating: number;
-  factoryCerts: string[];
-  specs: { label: string; value: string }[];
-  description: string;
-  docs: { name: string; size: string }[];
-  images: string[];
-}
+import { useProductWithDetails } from "@/hooks/use-products";
+import type { Product, ProductWithDetails } from "@/hooks/use-products";
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
-  recommendedProducts?: ProductInfo[];
+  recommendedProducts?: Product[];
 }
 
 const quickQuestions = [
@@ -48,24 +30,35 @@ const quickQuestions = [
   "推荐同品类产品",
 ];
 
+function formatPrice(p: number | null | undefined, currency: string | null | undefined = "USD"): string {
+  if (p == null) return "—";
+  const sym = currency === "USD" ? "$" : currency ? `${currency} ` : "$";
+  return `${sym}${Number(p).toFixed(2)}`;
+}
+
 export default function ProductDetail({
-  product,
+  productId,
+  fallbackProduct,
   allProducts = [],
   onBack,
   onSelectProduct,
 }: {
-  product: ProductInfo;
-  allProducts?: ProductInfo[];
+  productId: string;
+  fallbackProduct?: Product;
+  allProducts?: Product[];
   onBack: () => void;
-  onSelectProduct?: (p: ProductInfo) => void;
+  onSelectProduct?: (p: Product) => void;
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content: `您好！我是 **${product.name}** 的专属产品助手，由 **${product.factory}** 提供支持。\n\n关于这款产品的任何问题都可以问我，包括技术参数、价格、定制、交期等，我会尽力为您解答～`,
-      timestamp: new Date(),
-    },
-  ]);
+  const { data: detail, isLoading } = useProductWithDetails(productId);
+
+  // 用 detail 优先，否则回退到列表里的精简对象（让 UI 不闪烁）
+  const product: ProductWithDetails | (Product & { specs: []; images: []; docs: [] }) | null =
+    detail ?? (fallbackProduct ? { ...fallbackProduct, specs: [], images: [], docs: [] } : null);
+
+  const factoryName = product?.factory_name ?? "工厂";
+  const priceLabel = formatPrice(product?.price, product?.currency);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [added, setAdded] = useState(false);
@@ -73,21 +66,44 @@ export default function ProductDetail({
   const chatEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // 当产品名/工厂载入后初始化欢迎语
+  useEffect(() => {
+    if (!product) return;
+    setMessages([
+      {
+        role: "assistant",
+        content: `您好！我是 **${product.name}** 的专属产品助手，由 **${factoryName}** 提供支持。\n\n关于这款产品的任何问题都可以问我，包括技术参数、价格、定制、交期等，我会尽力为您解答～`,
+        timestamp: new Date(),
+      },
+    ]);
+    setSelectedImg(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId, factoryName, product?.name]);
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Get related products (same category, different id)
+  // 同品类推荐
   const relatedProducts = allProducts.filter(
-    (p) => p.category === product.category && p.id !== product.id
+    (p) => p.category && product?.category && p.category === product.category && p.id !== productId
   );
 
   const isRecommendQuery = (text: string) =>
     /推荐|同品类|同类|类似|相关|其他产品|还有什么/.test(text);
 
+  // 显示用图片（优先关联表，回退到 image_url）
+  const galleryImages: string[] = (() => {
+    if (detail?.images && detail.images.length > 0) {
+      return detail.images.map((i) => i.url);
+    }
+    if (product?.image_url) return [product.image_url];
+    return [];
+  })();
+
   const sendMessage = useCallback(
     async (text: string) => {
-      if (!text.trim() || isStreaming) return;
+      if (!text.trim() || isStreaming || !product) return;
       const userMsg: ChatMessage = { role: "user", content: text.trim(), timestamp: new Date() };
       const allMessages = [...messages, userMsg];
       setMessages(allMessages);
@@ -109,17 +125,22 @@ export default function ProductDetail({
 
       try {
         abortRef.current = new AbortController();
+        const specsStr = (detail?.specs ?? []).map((s) => `${s.label}: ${s.value}`).join(", ");
         const { data, error } = await supabase.functions.invoke("product-bot", {
           headers: { "x-google-api-key": googleApiKey },
           body: {
             productName: product.name,
-            productSku: product.sku,
-            productPrice: product.price,
-            productMoq: product.moq,
-            factoryName: product.factory,
-            specs: product.specs.map((s) => `${s.label}: ${s.value}`).join(", "),
+            productSku: product.sku ?? "",
+            productPrice: priceLabel,
+            productMoq: product.moq ?? "",
+            factoryName,
+            specs: specsStr,
             relatedProducts: relatedProducts.map((p) => ({
-              name: p.name, sku: p.sku, price: p.price, moq: p.moq, factory: p.factory,
+              name: p.name,
+              sku: p.sku ?? "",
+              price: formatPrice(p.price, p.currency),
+              moq: p.moq ?? "",
+              factory: p.factory_name ?? "",
             })),
             messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
           },
@@ -127,7 +148,6 @@ export default function ProductDetail({
 
         if (error) throw error;
 
-        // Handle SSE stream from response
         if (data instanceof ReadableStream) {
           const reader = data.getReader();
           const decoder = new TextDecoder();
@@ -160,7 +180,6 @@ export default function ProductDetail({
             }
           }
         } else if (typeof data === "string") {
-          // Non-stream text
           const lines = data.split("\n");
           let accumulated = "";
           for (const line of lines) {
@@ -183,10 +202,12 @@ export default function ProductDetail({
               return updated;
             });
           } else {
-            // Fallback: treat entire data as content
             setMessages((prev) => {
               const updated = [...prev];
-              updated[updated.length - 1] = { ...updated[updated.length - 1], content: typeof data === "object" ? JSON.stringify(data) : String(data) };
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                content: typeof data === "object" ? JSON.stringify(data) : String(data),
+              };
               return updated;
             });
           }
@@ -203,7 +224,6 @@ export default function ProductDetail({
         });
       } finally {
         setIsStreaming(false);
-        // Attach related products if the query was about recommendations
         if (isRecommendQuery(text) && relatedProducts.length > 0) {
           setMessages((prev) => {
             const updated = [...prev];
@@ -216,8 +236,17 @@ export default function ProductDetail({
         }
       }
     },
-    [messages, isStreaming, product],
+    [messages, isStreaming, product, detail, factoryName, priceLabel, relatedProducts]
   );
+
+  if (!product) {
+    return (
+      <div className="h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
+        <span className="text-xs text-muted-foreground">加载产品详情…</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-0 h-full flex flex-col">
@@ -243,7 +272,7 @@ export default function ProductDetail({
           <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => toast.success("样品申请已提交，工厂将在24小时内确认")}>
             <ClipboardList className="w-3.5 h-3.5" /> 申请样品
           </Button>
-          <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => { navigator.clipboard.writeText(`https://opc.com/product/${product.sku}`); toast.success("产品链接已复制"); }}>
+          <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => { navigator.clipboard.writeText(`https://opc.com/product/${product.sku ?? product.id}`); toast.success("产品链接已复制"); }}>
             <Share2 className="w-3.5 h-3.5" /> 分享
           </Button>
         </div>
@@ -256,15 +285,17 @@ export default function ProductDetail({
           {/* Image Gallery */}
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="h-64 bg-secondary">
-              <img
-                src={product.images[selectedImg]}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
+              {galleryImages[selectedImg] && (
+                <img
+                  src={galleryImages[selectedImg]}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
+              )}
             </div>
-            {product.images.length > 1 && (
+            {galleryImages.length > 1 && (
               <div className="flex gap-1 p-2 border-t border-border">
-                {product.images.map((img, i) => (
+                {galleryImages.map((img, i) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImg(i)}
@@ -284,24 +315,24 @@ export default function ProductDetail({
           <div className="bg-card border border-border rounded-xl p-4">
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-[10px] text-muted-foreground">{product.category} · {product.sku}</span>
+                <span className="text-[10px] text-muted-foreground">{product.category ?? ""} · {product.sku ?? ""}</span>
                 <h2 className="text-base font-display font-bold mt-0.5">{product.name}</h2>
               </div>
               <div className="text-right">
-                <div className="text-lg font-bold text-primary">{product.price}</div>
-                <div className="text-[10px] text-muted-foreground">MOQ: {product.moq}</div>
+                <div className="text-lg font-bold text-primary">{priceLabel}</div>
+                <div className="text-[10px] text-muted-foreground">MOQ: {product.moq ?? "—"}</div>
               </div>
             </div>
             <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
               <span className="flex items-center gap-0.5">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className={cn("w-3 h-3", i < product.factoryRating ? "text-primary fill-primary" : "text-muted")} />
+                  <Star key={i} className={cn("w-3 h-3", i < (product.factory_rating ?? 0) ? "text-primary fill-primary" : "text-muted")} />
                 ))}
-                <span className="ml-1">{product.factoryRating}.0</span>
+                <span className="ml-1">{(product.factory_rating ?? 0).toFixed(1)}</span>
               </span>
-              <span>库存: {product.stock}</span>
-              <span>{product.views} 浏览</span>
-              <span>{product.inquiries} 询盘</span>
+              <span>库存: {product.stock ?? "—"}</span>
+              <span>{(product.views ?? 0)} 浏览</span>
+              <span>{(product.inquiries_count ?? 0)} 询盘</span>
             </div>
           </div>
 
@@ -310,14 +341,22 @@ export default function ProductDetail({
             <h4 className="text-xs font-semibold mb-3 flex items-center gap-1">
               <Package className="w-3.5 h-3.5 text-primary" /> 规格参数
             </h4>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-              {product.specs.map((s) => (
-                <div key={s.label} className="flex justify-between text-xs py-1 border-b border-border/50">
-                  <span className="text-muted-foreground">{s.label}</span>
-                  <span className="font-medium">{s.value}</span>
-                </div>
-              ))}
-            </div>
+            {isLoading && !detail ? (
+              <div className="text-xs text-muted-foreground py-2 flex items-center gap-2">
+                <Loader2 className="w-3 h-3 animate-spin" /> 加载规格…
+              </div>
+            ) : (detail?.specs?.length ?? 0) === 0 ? (
+              <div className="text-xs text-muted-foreground py-2">暂无规格参数</div>
+            ) : (
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+                {detail!.specs.map((s) => (
+                  <div key={s.id} className="flex justify-between text-xs py-1 border-b border-border/50">
+                    <span className="text-muted-foreground">{s.label}</span>
+                    <span className="font-medium">{s.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Factory Info */}
@@ -327,12 +366,12 @@ export default function ProductDetail({
             </h4>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-sm font-bold">
-                {product.factory[0]}
+                {factoryName[0]}
               </div>
               <div>
-                <div className="text-sm font-medium">{product.factory}</div>
-                <div className="flex gap-1 mt-1">
-                  {product.factoryCerts.map((c) => (
+                <div className="text-sm font-medium">{factoryName}</div>
+                <div className="flex gap-1 mt-1 flex-wrap">
+                  {(product.factory_certs ?? []).map((c) => (
                     <Badge key={c} variant="outline" className="text-[9px] h-4 gap-0.5">
                       <Shield className="w-2.5 h-2.5 text-brand-green" /> {c}
                     </Badge>
@@ -343,27 +382,29 @@ export default function ProductDetail({
           </div>
 
           {/* Description */}
-          <div className="bg-card border border-border rounded-xl p-4">
-            <h4 className="text-xs font-semibold mb-2">产品描述</h4>
-            <p className="text-xs text-muted-foreground leading-relaxed">{product.description}</p>
-          </div>
+          {product.description && (
+            <div className="bg-card border border-border rounded-xl p-4">
+              <h4 className="text-xs font-semibold mb-2">产品描述</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">{product.description}</p>
+            </div>
+          )}
 
           {/* Docs */}
-          {product.docs.length > 0 && (
+          {(detail?.docs?.length ?? 0) > 0 && (
             <div className="bg-card border border-border rounded-xl p-4">
               <h4 className="text-xs font-semibold mb-2 flex items-center gap-1">
                 <FileText className="w-3.5 h-3.5 text-primary" /> 技术文档
               </h4>
               <div className="space-y-1.5">
-                {product.docs.map((d) => (
+                {detail!.docs.map((d) => (
                   <button
-                    key={d.name}
+                    key={d.id}
                     className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/30 transition-colors text-xs"
                     onClick={() => toast("正在下载 " + d.name)}
                   >
                     <Download className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="flex-1 text-left">{d.name}</span>
-                    <span className="text-[10px] text-muted-foreground">{d.size}</span>
+                    <span className="text-[10px] text-muted-foreground">{d.file_size ?? ""}</span>
                   </button>
                 ))}
               </div>
@@ -383,7 +424,7 @@ export default function ProductDetail({
                 <div className="text-xs font-semibold flex items-center gap-1">
                   <MessageSquare className="w-3 h-3 text-primary" /> 产品助手
                 </div>
-                <div className="text-[10px] text-muted-foreground">由 {product.factory} 提供支持</div>
+                <div className="text-[10px] text-muted-foreground">由 {factoryName} 提供支持</div>
               </div>
               <div className="ml-auto">
                 <span className="text-[9px] bg-brand-green/15 text-brand-green px-1.5 py-0.5 rounded-full font-medium">在线</span>
@@ -437,16 +478,18 @@ export default function ProductDetail({
                         className="w-full flex items-center gap-2.5 p-2 rounded-lg border border-border bg-card hover:bg-secondary/40 transition-colors text-left"
                         onClick={() => onSelectProduct?.(rp)}
                       >
-                        <img src={rp.image} alt={rp.name} className="w-10 h-10 rounded-md object-cover flex-shrink-0" />
+                        {rp.image_url && (
+                          <img src={rp.image_url} alt={rp.name} className="w-10 h-10 rounded-md object-cover flex-shrink-0" />
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="text-[11px] font-medium truncate">{rp.name}</div>
                           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                            <span className="text-primary font-semibold">{rp.price}</span>
-                            <span>MOQ: {rp.moq}</span>
+                            <span className="text-primary font-semibold">{formatPrice(rp.price, rp.currency)}</span>
+                            <span>MOQ: {rp.moq ?? "—"}</span>
                           </div>
                           <div className="flex items-center gap-1 mt-0.5">
-                            <span className="text-[9px] text-muted-foreground">{rp.factory}</span>
-                            {rp.hasBot && (
+                            <span className="text-[9px] text-muted-foreground">{rp.factory_name ?? ""}</span>
+                            {rp.has_bot && (
                               <Badge variant="outline" className="text-[8px] h-3.5 px-1 gap-0.5">
                                 <Bot className="w-2 h-2" /> AI助手
                               </Badge>
