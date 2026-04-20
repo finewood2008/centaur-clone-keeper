@@ -533,6 +533,13 @@ export default function Products() {
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <Button
                       size="sm" variant="ghost" className="h-7 w-7 p-0"
+                      onClick={(e) => { e.stopPropagation(); openEdit(p.id); }}
+                      title="编辑产品"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      size="sm" variant="ghost" className="h-7 w-7 p-0"
                       onClick={(e) => {
                         e.stopPropagation();
                         navigator.clipboard.writeText(`https://opc.com/product/${p.sku ?? p.id}`);
