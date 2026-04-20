@@ -243,13 +243,18 @@ export default function Inbox() {
   const chCfg = selectedInquiry ? channelConfig[selectedInquiry.channel] : null;
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] gap-0 -m-3 md:-m-4 lg:-m-6">
-      {/* Left: Inquiry list */}
-      <div className={cn(
-        "border-r border-border flex flex-col shrink-0",
-        isMobile ? (selectedId ? "hidden" : "w-full") : "w-80 lg:w-96"
-      )}>
-        <div className="p-4 border-b border-border">
+    <div className="flex flex-col h-[calc(100vh-7rem)] -m-3 md:-m-4 lg:-m-6">
+      <ApiKeyBanner
+        className="px-4 pt-3"
+        description="后，询盘 AI 智能回复将自动激活"
+      />
+      <div className="flex flex-1 min-h-0 gap-0">
+        {/* Left: Inquiry list */}
+        <div className={cn(
+          "border-r border-border flex flex-col shrink-0",
+          isMobile ? (selectedId ? "hidden" : "w-full") : "w-80 lg:w-96"
+        )}>
+          <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-display font-semibold text-base">询盘中心</h2>
             <span className="pill-badge text-primary">
