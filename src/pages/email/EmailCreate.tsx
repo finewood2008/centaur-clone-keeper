@@ -770,6 +770,56 @@ Now write Email ${stepNum} (${seqMeta.name}).`;
         </div>
       )}
 
+      {/* Sequence Edit Dialog */}
+      <Dialog open={editingSeqStep != null} onOpenChange={(o) => !o && setEditingSeqStep(null)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-sm">
+              编辑第 {editingSeqStep} 封 ·{" "}
+              {sequenceSteps.find((x) => x.step === editingSeqStep)?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">主题行</Label>
+              <Input
+                value={editDraft.subject}
+                onChange={(e) => setEditDraft((d) => ({ ...d, subject: e.target.value }))}
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">正文（支持 {`{{firstName}}`} 等变量）</Label>
+              <Textarea
+                value={editDraft.body}
+                onChange={(e) => setEditDraft((d) => ({ ...d, body: e.target.value }))}
+                className="text-xs min-h-[240px] font-mono"
+              />
+            </div>
+          </div>
+          <div className="flex justify-between gap-2 pt-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={generatingSeqStep != null}
+              onClick={() => {
+                const stepNum = editingSeqStep;
+                if (stepNum != null) {
+                  setEditingSeqStep(null);
+                  handleSequenceGenerate(stepNum);
+                }
+              }}
+            >
+              <RefreshCw className="w-3.5 h-3.5 mr-1" /> AI 重新生成
+            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setEditingSeqStep(null)}>取消</Button>
+              <Button size="sm" onClick={saveEditSequence}>保存</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Email Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
