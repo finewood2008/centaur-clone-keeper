@@ -40,12 +40,12 @@ interface CardDef {
 const cards: CardDef[] = [
   {
     key: "inquiries",
-    title: "今日询盘",
+    title: "本月新询盘",
     icon: MessageSquare,
     iconColor: "text-primary",
     glowColor: "hsla(30 90% 55% / 0.15)",
-    getValue: (s) => `${s.inquiries}条`,
-    getChange: () => ({ text: "↑ 12%", trend: "up", label: "vs 昨日" }),
+    getValue: (s) => `${s.monthlyInquiries ?? s.inquiries}条`,
+    getChange: () => ({ text: "实时", trend: "up", label: "本月累计" }),
   },
   {
     key: "automation",
@@ -54,16 +54,16 @@ const cards: CardDef[] = [
     iconColor: "text-brand-cyan",
     glowColor: "hsla(190 80% 55% / 0.15)",
     getValue: (s) => `${s.automationRate}%`,
-    getChange: () => ({ text: "↑ 5%", trend: "up", label: "vs 上周" }),
+    getChange: () => ({ text: "AI/总消息", trend: "up", label: "实时" }),
   },
   {
     key: "response",
-    title: "平均响应时间",
+    title: "客户总数",
     icon: Clock,
     iconColor: "text-brand-green",
     glowColor: "hsla(155 65% 48% / 0.15)",
-    getValue: (s) => `${s.avgResponseTime}秒`,
-    getChange: () => ({ text: "↓ 180%", trend: "up", label: "vs 人工" }),
+    getValue: (s) => `${s.totalCustomers ?? 0}`,
+    getChange: (s) => ({ text: `转化率 ${s.conversionRate ?? 0}%`, trend: "up", label: "active 占比" }),
   },
   {
     key: "satisfaction",
