@@ -4,8 +4,8 @@
  */
 import { Link } from "react-router-dom";
 import { Sparkles } from "lucide-react";
-import { motion } from "framer-motion";
-import { hasStoredApiKey } from "@/hooks/use-api-key";
+import { motion, AnimatePresence } from "framer-motion";
+import { useHasApiKey } from "@/hooks/use-api-key";
 
 interface ApiKeyBannerProps {
   /** 自定义说明文字（覆盖默认描述） */
@@ -15,7 +15,7 @@ interface ApiKeyBannerProps {
 }
 
 export default function ApiKeyBanner({ description, className = "" }: ApiKeyBannerProps) {
-  if (hasStoredApiKey()) return null;
+  const hasKey = useHasApiKey();
 
   return (
     <motion.div

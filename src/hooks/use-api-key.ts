@@ -1,11 +1,12 @@
 /**
- * useApiKey - Google AI API Key 管理 Hook
- * 存储、验证、获取用户配置的 Google Gemini API Key
+ * useApiKey - Google AI API Key 管理 Hook（响应式 store）
+ * 使用 useSyncExternalStore 实现跨组件、跨标签页的响应式更新
  */
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 
 const STORAGE_KEY = "banrenma_google_api_key";
 const MODEL_KEY = "banrenma_google_model";
+const DEFAULT_MODEL = "gemini-2.5-flash";
 
 export const GOOGLE_MODELS = [
   { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash", desc: "快速响应，性价比高" },
@@ -13,99 +14,126 @@ export const GOOGLE_MODELS = [
   { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash", desc: "基础模型，速度最快" },
 ] as const;
 
-interface ApiKeyState {
-  key: string;
-  isValid: boolean | null;
-  isValidating: boolean;
-  model: string;
-}
+/* ---------------- 响应式订阅器 ---------------- */
+type Listener = () => void;
+const listeners = new Set<Listener>();
 
+const notify = () => listeners.forEach((l) => l());
+
+const subscribe = (listener: Listener) => {
+  listeners.add(listener);
+  // 跨标签页同步
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === STORAGE_KEY || e.key === MODEL_KEY) listener();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener("storage", onStorage);
+  };
+};
+
+const getKeySnapshot = () => {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(STORAGE_KEY) || "";
+};
+
+const getModelSnapshot = () => {
+  if (typeof window === "undefined") return DEFAULT_MODEL;
+  return localStorage.getItem(MODEL_KEY) || DEFAULT_MODEL;
+};
+
+const getServerSnapshot = () => "";
+const getServerModelSnapshot = () => DEFAULT_MODEL;
+
+/* ---------------- 写入操作（触发订阅） ---------------- */
+const writeKey = (key: string) => {
+  const trimmed = key.trim();
+  if (trimmed) localStorage.setItem(STORAGE_KEY, trimmed);
+  else localStorage.removeItem(STORAGE_KEY);
+  notify();
+};
+
+const writeModel = (model: string) => {
+  localStorage.setItem(MODEL_KEY, model);
+  notify();
+};
+
+/* ---------------- Hook ---------------- */
 export function useApiKey() {
-  const [state, setState] = useState<ApiKeyState>({
-    key: "",
-    isValid: null,
-    isValidating: false,
-    model: "gemini-2.5-flash",
-  });
+  const apiKey = useSyncExternalStore(subscribe, getKeySnapshot, getServerSnapshot);
+  const model = useSyncExternalStore(subscribe, getModelSnapshot, getServerModelSnapshot);
 
-  useEffect(() => {
-    const savedKey = localStorage.getItem(STORAGE_KEY);
-    const savedModel = localStorage.getItem(MODEL_KEY);
-    if (savedKey || savedModel) {
-      setState((prev) => ({
-        ...prev,
-        key: savedKey || "",
-        model: savedModel || "gemini-2.5-flash",
-      }));
-    }
-  }, []);
+  const [isValid, setIsValid] = useState<boolean | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
 
   const saveKey = useCallback((newKey: string) => {
-    const trimmed = newKey.trim();
-    localStorage.setItem(STORAGE_KEY, trimmed);
-    setState((prev) => ({ ...prev, key: trimmed, isValid: null }));
+    writeKey(newKey);
+    setIsValid(null);
   }, []);
 
   const clearKey = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setState((prev) => ({ ...prev, key: "", isValid: null, isValidating: false }));
+    writeKey("");
+    setIsValid(null);
+    setIsValidating(false);
   }, []);
 
-  const saveModel = useCallback((model: string) => {
-    localStorage.setItem(MODEL_KEY, model);
-    setState((prev) => ({ ...prev, model }));
+  const saveModel = useCallback((m: string) => {
+    writeModel(m);
   }, []);
 
   const validateKey = useCallback(async (keyToValidate?: string) => {
-    const k = keyToValidate || state.key;
+    const k = keyToValidate || apiKey;
     if (!k) return false;
-
-    setState((prev) => ({ ...prev, isValidating: true }));
+    setIsValidating(true);
     try {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models?key=${k}`
       );
       const valid = res.ok;
-      setState((prev) => ({ ...prev, isValid: valid, isValidating: false }));
+      setIsValid(valid);
+      setIsValidating(false);
       return valid;
     } catch {
-      setState((prev) => ({ ...prev, isValid: false, isValidating: false }));
+      setIsValid(false);
+      setIsValidating(false);
       return false;
     }
-  }, [state.key]);
+  }, [apiKey]);
 
-  const getKey = useCallback(() => {
-    return state.key || localStorage.getItem(STORAGE_KEY) || "";
-  }, [state.key]);
-
-  const getModel = useCallback(() => {
-    return state.model || localStorage.getItem(MODEL_KEY) || "gemini-2.5-flash";
-  }, [state.model]);
+  const getKey = useCallback(() => apiKey, [apiKey]);
+  const getModel = useCallback(() => model, [model]);
 
   return {
-    apiKey: state.key,
-    model: state.model,
-    isValid: state.isValid,
-    isValidating: state.isValidating,
+    apiKey,
+    model,
+    isValid,
+    isValidating,
     saveKey,
     clearKey,
     saveModel,
     validateKey,
     getKey,
     getModel,
-    hasKey: !!state.key,
+    hasKey: !!apiKey,
   };
 }
 
-/** 静态工具函数（不需要 Hook 时使用） */
+/* ---------------- 响应式布尔 Hook（专给 Banner/Guard 用） ---------------- */
+export function useHasApiKey(): boolean {
+  const apiKey = useSyncExternalStore(subscribe, getKeySnapshot, getServerSnapshot);
+  return !!apiKey;
+}
+
+/* ---------------- 静态工具函数（边缘场景，如非 React 环境） ---------------- */
 export function getStoredApiKey(): string {
-  return localStorage.getItem(STORAGE_KEY) || "";
+  return getKeySnapshot();
 }
 
 export function getStoredModel(): string {
-  return localStorage.getItem(MODEL_KEY) || "gemini-2.5-flash";
+  return getModelSnapshot();
 }
 
 export function hasStoredApiKey(): boolean {
-  return !!localStorage.getItem(STORAGE_KEY);
+  return !!getKeySnapshot();
 }
