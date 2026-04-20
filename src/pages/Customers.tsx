@@ -484,7 +484,19 @@ export default function Customers() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((c) => {
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
+                    <Loader2 className="w-4 h-4 inline animate-spin mr-2" /> 加载客户数据…
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center text-xs text-muted-foreground">
+                    {customerList.length === 0 ? "暂无客户数据，点击右上角「批量导入」开始" : "没有匹配的客户"}
+                  </td>
+                </tr>
+              ) : filtered.map((c) => {
                 const status = statusLabels[c.status];
                 return (
                   <tr key={c.id} className="hover:bg-secondary/30 transition-colors cursor-pointer" onClick={() => openCustomer(c)}>
