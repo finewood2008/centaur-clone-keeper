@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { CheckCircle, XCircle, AlertTriangle, Shield, TrendingUp, Pause, Eye, DollarSign, MousePointerClick } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ApiKeyBanner from "@/components/ApiKeyBanner";
 
 interface Approval {
   id: string;
@@ -120,6 +121,7 @@ export default function AdsApprovals() {
 
   return (
     <div className="space-y-4">
+      <ApiKeyBanner description="后，AI 广告优化建议与自动审核将自动激活" />
       <Tabs defaultValue="pending">
         <TabsList>
           <TabsTrigger value="pending" className="text-xs">
