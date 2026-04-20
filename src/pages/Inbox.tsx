@@ -194,7 +194,7 @@ export default function Inbox() {
 
     try {
       await sendMessage.mutateAsync({
-        inquiry_id: selectedId,
+        inquiryId: selectedId,
         sender: "user",
         text,
       });

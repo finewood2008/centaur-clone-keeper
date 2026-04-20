@@ -60,3 +60,24 @@ export function useApiKey() {
     hasApiKey: !!apiKey,
   };
 }
+
+// Standalone getters for use outside React components (e.g. AIAssistant)
+export function getStoredApiKey(): string {
+  return localStorage.getItem("banrenma_google_api_key") || "";
+}
+
+export function getStoredModel(): string {
+  return localStorage.getItem("banrenma_google_model") || "gemini-2.5-flash";
+}
+
+// Hook to check if API key is configured
+export function useHasApiKey(): boolean {
+  return !!localStorage.getItem("banrenma_google_api_key");
+}
+
+// Available Gemini models
+export const GOOGLE_MODELS = [
+  { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash (推荐)" },
+  { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
+] as const;

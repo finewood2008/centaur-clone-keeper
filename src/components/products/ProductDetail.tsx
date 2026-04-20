@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { useProductWithDetails } from "@/hooks/use-products";
-import type { Product, ProductWithDetails } from "@/hooks/use-products";
+import { useProduct } from "@/hooks/use-products";
+import type { Product, ProductWithRelations } from "@/hooks/use-products";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -48,10 +48,10 @@ export default function ProductDetail({
   onBack: () => void;
   onSelectProduct?: (p: Product) => void;
 }) {
-  const { data: detail, isLoading } = useProductWithDetails(productId);
+  const { data: detail, isLoading } = useProduct(productId);
 
   // 用 detail 优先，否则回退到列表里的精简对象（让 UI 不闪烁）
-  const product: ProductWithDetails | (Product & { specs: []; images: []; docs: [] }) | null =
+  const product: ProductWithRelations | (Product & { specs: []; images: []; docs: [] }) | null =
     detail ?? (fallbackProduct ? { ...fallbackProduct, specs: [], images: [], docs: [] } : null);
 
   const factoryName = product?.factory_name ?? "工厂";

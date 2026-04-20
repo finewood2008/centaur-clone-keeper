@@ -27,7 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  useCreateProduct, useUpdateProduct, useProductWithDetails,
+  useCreateProduct, useUpdateProduct, useProduct,
   useReplaceProductSpecs, useReplaceProductImages, useReplaceProductDocs,
   uploadProductImage, uploadProductDoc,
   type Product,
@@ -60,7 +60,7 @@ const MAX_DOC = 10 * 1024 * 1024; // 10MB
 
 export default function ProductFormDialog({ open, onOpenChange, productId }: Props) {
   const isEdit = !!productId;
-  const { data: detail } = useProductWithDetails(productId ?? undefined);
+  const { data: detail } = useProduct(productId ?? undefined);
   const createMut = useCreateProduct();
   const updateMut = useUpdateProduct();
   const replaceSpecs = useReplaceProductSpecs();
