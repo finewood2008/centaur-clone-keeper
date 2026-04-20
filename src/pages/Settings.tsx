@@ -1,13 +1,14 @@
 /**
  * Settings - 系统设置页面
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   User, Settings as SettingsIcon, Bot, Shield, Link2, Users, HelpCircle, Wrench,
   Globe, Palette, Bell, HardDrive, ChevronRight, Check, Trash2, RotateCcw, LogOut,
   Mail, MessageSquare, Database, Key, AlertTriangle, BookOpen, Video, MessageCircle,
-  Bug, FlaskConical, ExternalLink,
+  Bug, FlaskConical, ExternalLink, Loader2,
 } from "lucide-react";
+import { useApiKey, GOOGLE_MODELS } from "@/hooks/use-api-key";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/use-theme";
 import { Switch } from "@/components/ui/switch";
@@ -199,21 +200,79 @@ function SystemSection() {
 
 /* === AI Config === */
 function AISection() {
+  const { apiKey, saveKey, isValid, isValidating, validateKey, model, saveModel } = useApiKey();
+  const [keyInput, setKeyInput] = useState(apiKey);
+  const [showKey, setShowKey] = useState(false);
   const [speed, setSpeed] = useState("balanced");
   const [creativity, setCreativity] = useState([50]);
   const [expertise, setExpertise] = useState([70]);
 
+  useEffect(() => {
+    if (apiKey) setKeyInput(apiKey);
+  }, [apiKey]);
+
   return (
     <>
+      <SectionCard title="Google AI API Key" icon={Key}>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Input
+              type={showKey ? "text" : "password"}
+              placeholder="AIzaSy..."
+              value={keyInput}
+              onChange={(e) => setKeyInput(e.target.value)}
+              className="flex-1 h-8 text-xs font-mono"
+            />
+            <button
+              onClick={async () => {
+                saveKey(keyInput);
+                const ok = await validateKey(keyInput);
+                if (ok) toast.success("API Key 已验证并保存");
+                else toast.error("API Key 无效，请检查");
+              }}
+              disabled={isValidating || !keyInput.trim()}
+              className="text-[10px] px-3 py-1.5 rounded glass-panel hover:bg-accent transition-colors flex items-center gap-1 disabled:opacity-50 whitespace-nowrap"
+            >
+              {isValidating ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+              {isValidating ? "验证中" : "保存并验证"}
+            </button>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setShowKey(!showKey)} className="text-[10px] text-muted-foreground hover:text-foreground">
+                {showKey ? "隐藏" : "显示"} Key
+              </button>
+              {isValid === true && <span className="text-[10px] text-brand-green">✅ 已验证</span>}
+              {isValid === false && <span className="text-[10px] text-destructive">❌ 无效</span>}
+            </div>
+            <a
+              href="https://aistudio.google.com/apikey"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[10px] text-primary hover:underline flex items-center gap-1"
+            >
+              如何获取 Key？ <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        </div>
+      </SectionCard>
       <SectionCard title="默认 AI 模型" icon={Bot}>
         <div className="space-y-2">
-          <SettingRow label="主模型">
-            <Select defaultValue="gpt4"><SelectTrigger className="w-36 h-7 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="gpt4">GPT-4</SelectItem><SelectItem value="gpt5">GPT-5</SelectItem><SelectItem value="gemini">Gemini 2.5 Pro</SelectItem></SelectContent></Select>
+          <SettingRow label="AI 模型" desc="所有 AI 功能使用的 Gemini 模型">
+            <Select value={model} onValueChange={saveModel}>
+              <SelectTrigger className="w-44 h-7 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {GOOGLE_MODELS.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    <div className="flex flex-col">
+                      <span className="text-xs">{m.label}</span>
+                      <span className="text-[10px] text-muted-foreground">{m.desc}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </SettingRow>
-          <SettingRow label="备用模型">
-            <Select defaultValue="claude"><SelectTrigger className="w-36 h-7 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="claude">Claude 3</SelectItem><SelectItem value="gemini-flash">Gemini Flash</SelectItem></SelectContent></Select>
-          </SettingRow>
-          <SettingRow label="本地模型"><Switch /></SettingRow>
         </div>
       </SectionCard>
       <SectionCard title="Agent 行为设置" icon={SettingsIcon}>
@@ -304,7 +363,7 @@ function IntegrationsSection() {
     { group: "邮箱集成", icon: Mail, items: [{ name: "Gmail", connected: true }, { name: "Outlook", connected: false }] },
     { group: "即时通讯", icon: MessageSquare, items: [{ name: "企业微信", connected: true }, { name: "钉钉", connected: false }, { name: "Slack", connected: false }] },
     { group: "数据源", icon: Database, items: [{ name: "CRM系统", connected: false }, { name: "ERP系统", connected: false }, { name: "电商平台", connected: false }] },
-    { group: "API 密钥", icon: Key, items: [{ name: "OpenAI", connected: true }, { name: "Anthropic", connected: true }] },
+    { group: "API 密钥", icon: Key, items: [{ name: "Google AI", connected: !!localStorage.getItem("banrenma_google_api_key") }] },
   ];
 
   return (
