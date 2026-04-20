@@ -174,7 +174,7 @@ function seedDemoData() {
   console.log('📦 Seeding database with demo data...');
 
   const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
-  const passwordHash = bcrypt.hashSync('demo123', 10);
+  const passwordHash = bcrypt.hashSync('demo123456', 10);
 
   const seed = db.transaction(() => {
     // ------------------------------------------------------------------

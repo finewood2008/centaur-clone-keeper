@@ -1,85 +1,102 @@
 /**
- * useInquiries + useMessages - 询盘 & 消息 CRUD hooks
- * 连接 Supabase inquiries + messages 表
+ * useInquiries — 询盘 + 消息 CRUD hooks
+ * 本地 API 版本，替代 Supabase
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import { apiFetch } from "@/lib/api-client";
 
-export type Inquiry = Tables<"inquiries">;
-export type InquiryInsert = TablesInsert<"inquiries">;
-export type InquiryUpdate = TablesUpdate<"inquiries">;
-export type Message = Tables<"messages">;
-export type MessageInsert = TablesInsert<"messages">;
+export interface Inquiry {
+  id: string;
+  user_id: string;
+  customer_id: string | null;
+  name: string;
+  company: string | null;
+  email: string | null;
+  avatar: string | null;
+  channel: "Email" | "独立站" | "Instagram" | "Facebook" | "Twitter";
+  subject: string | null;
+  last_message: string | null;
+  priority: "high" | "medium" | "low";
+  ai_score: number;
+  unread: boolean;
+  status: "open" | "replied" | "closed";
+  created_at: string;
+  updated_at: string;
+}
 
-// ============================================================================
-// INQUIRIES
-// ============================================================================
+export interface Message {
+  id: string;
+  inquiry_id: string;
+  sender: "customer" | "ai" | "user";
+  text: string;
+  subject: string | null;
+  ai_generated: boolean;
+  created_at: string;
+}
+
+export interface InquiryWithMessages extends Inquiry {
+  messages: Message[];
+}
 
 export function useInquiries() {
-  return useQuery({
+  return useQuery<Inquiry[]>({
     queryKey: ["inquiries"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("inquiries")
-        .select("*")
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      return data as Inquiry[];
-    },
+    queryFn: () => apiFetch<Inquiry[]>("/inquiries"),
   });
 }
 
 export function useInquiry(id: string | undefined) {
-  return useQuery({
-    queryKey: ["inquiries", id],
-    queryFn: async () => {
-      if (!id) return null;
-      const { data, error } = await supabase
-        .from("inquiries")
-        .select("*")
-        .eq("id", id)
-        .single();
-      if (error) throw error;
-      return data as Inquiry;
-    },
+  return useQuery<InquiryWithMessages>({
+    queryKey: ["inquiry", id],
+    queryFn: () => apiFetch<InquiryWithMessages>(`/inquiries/${id}`),
     enabled: !!id,
+  });
+}
+
+export function useCreateInquiry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<Inquiry>) =>
+      apiFetch<Inquiry>("/inquiries", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inquiries"] }),
   });
 }
 
 export function useUpdateInquiry() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: InquiryUpdate & { id: string }) => {
-      const { data, error } = await supabase
-        .from("inquiries")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as Inquiry;
+    mutationFn: ({ id, ...data }: Partial<Inquiry> & { id: string }) =>
+      apiFetch<Inquiry>(`/inquiries/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["inquiries"] });
+      qc.invalidateQueries({ queryKey: ["inquiry", vars.id] });
     },
+  });
+}
+
+export function useDeleteInquiry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/inquiries/${id}`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["inquiries"] }),
   });
 }
 
-// ============================================================================
-// MESSAGES
-// ============================================================================
-
 export function useMessages(inquiryId: string | undefined) {
-  return useQuery({
+  return useQuery<Message[]>({
     queryKey: ["messages", inquiryId],
     queryFn: async () => {
-      if (!inquiryId) return [];
-      const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("inquiry_id", inquiryId)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data as Message[];
+      const data = await apiFetch<InquiryWithMessages>(
+        `/inquiries/${inquiryId}`
+      );
+      return data.messages || [];
     },
     enabled: !!inquiryId,
   });
@@ -88,27 +105,26 @@ export function useMessages(inquiryId: string | undefined) {
 export function useSendMessage() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (message: MessageInsert) => {
-      const { data, error } = await supabase
-        .from("messages")
-        .insert(message)
-        .select()
-        .single();
-      if (error) throw error;
-
-      // Also update the inquiry's last_message and unread status
-      await supabase
-        .from("inquiries")
-        .update({
-          last_message: message.text.substring(0, 200),
-          status: message.sender === "user" ? "replied" : undefined,
-        })
-        .eq("id", message.inquiry_id);
-
-      return data as Message;
-    },
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["messages", data.inquiry_id] });
+    mutationFn: ({
+      inquiryId,
+      text,
+      sender,
+      subject,
+      ai_generated,
+    }: {
+      inquiryId: string;
+      text: string;
+      sender: "customer" | "ai" | "user";
+      subject?: string;
+      ai_generated?: boolean;
+    }) =>
+      apiFetch<Message>(`/inquiries/${inquiryId}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ text, sender, subject, ai_generated }),
+      }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["inquiry", vars.inquiryId] });
+      qc.invalidateQueries({ queryKey: ["messages", vars.inquiryId] });
       qc.invalidateQueries({ queryKey: ["inquiries"] });
     },
   });

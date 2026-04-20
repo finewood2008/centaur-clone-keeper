@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useProductWithDetails } from "@/hooks/use-products";
 import type { Product, ProductWithDetails } from "@/hooks/use-products";
 
@@ -126,91 +125,28 @@ export default function ProductDetail({
       try {
         abortRef.current = new AbortController();
         const specsStr = (detail?.specs ?? []).map((s) => `${s.label}: ${s.value}`).join(", ");
-        const { data, error } = await supabase.functions.invoke("product-bot", {
-          headers: { "x-google-api-key": googleApiKey },
-          body: {
-            productName: product.name,
-            productSku: product.sku ?? "",
-            productPrice: priceLabel,
-            productMoq: product.moq ?? "",
-            factoryName,
-            specs: specsStr,
-            relatedProducts: relatedProducts.map((p) => ({
-              name: p.name,
-              sku: p.sku ?? "",
-              price: formatPrice(p.price, p.currency),
-              moq: p.moq ?? "",
-              factory: p.factory_name ?? "",
-            })),
-            messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
-          },
-        });
 
-        if (error) throw error;
+        // AI product assistant — placeholder for local mode
+        toast.info("AI product assistant coming soon");
 
-        if (data instanceof ReadableStream) {
-          const reader = data.getReader();
-          const decoder = new TextDecoder();
-          let accumulated = "";
+        // Simulate a basic response using product info
+        const simulatedReply = `关于 **${product.name}** 的问题，以下是基本信息：\n\n` +
+          `• 价格: ${priceLabel}\n` +
+          `• MOQ: ${product.moq ?? "—"}\n` +
+          `• 工厂: ${factoryName}\n` +
+          (specsStr ? `• 规格: ${specsStr}\n` : "") +
+          `\n完整 AI 产品助手功能即将上线，届时将提供更智能的解答。`;
 
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split("\n");
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                const jsonStr = line.slice(6).trim();
-                if (jsonStr === "[DONE]") continue;
-                try {
-                  const parsed = JSON.parse(jsonStr);
-                  const delta =
-                    parsed.candidates?.[0]?.content?.parts?.[0]?.text ||
-                    parsed.choices?.[0]?.delta?.content;
-                  if (delta) {
-                    accumulated += delta;
-                    setMessages((prev) => {
-                      const updated = [...prev];
-                      updated[updated.length - 1] = { ...updated[updated.length - 1], content: accumulated };
-                      return updated;
-                    });
-                  }
-                } catch {}
-              }
-            }
-          }
-        } else if (typeof data === "string") {
-          const lines = data.split("\n");
-          let accumulated = "";
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const jsonStr = line.slice(6).trim();
-              if (jsonStr === "[DONE]") continue;
-              try {
-                const parsed = JSON.parse(jsonStr);
-                const delta =
-                  parsed.candidates?.[0]?.content?.parts?.[0]?.text ||
-                  parsed.choices?.[0]?.delta?.content;
-                if (delta) accumulated += delta;
-              } catch {}
-            }
-          }
-          if (accumulated) {
-            setMessages((prev) => {
-              const updated = [...prev];
-              updated[updated.length - 1] = { ...updated[updated.length - 1], content: accumulated };
-              return updated;
-            });
-          } else {
-            setMessages((prev) => {
-              const updated = [...prev];
-              updated[updated.length - 1] = {
-                ...updated[updated.length - 1],
-                content: typeof data === "object" ? JSON.stringify(data) : String(data),
-              };
-              return updated;
-            });
-          }
+        // Simulate streaming effect
+        let accumulated = "";
+        for (const char of simulatedReply) {
+          accumulated += char;
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { ...updated[updated.length - 1], content: accumulated };
+            return updated;
+          });
+          await new Promise((r) => setTimeout(r, 10));
         }
       } catch (err: any) {
         console.error("Product bot error:", err);

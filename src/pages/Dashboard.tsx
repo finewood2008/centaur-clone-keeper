@@ -17,8 +17,6 @@ import SatisfactionDialog from "@/components/dashboard/SatisfactionDialog";
 import InquiryTrendChart from "@/components/dashboard/InquiryTrendChart";
 import InquiryDialog from "@/components/dashboard/InquiryDialog";
 import { useDashboardStats } from "@/hooks/use-dashboard-stats";
-import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 const stagger = {
   hidden: { opacity: 0 },
@@ -31,7 +29,6 @@ const fadeUp = {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const qc = useQueryClient();
   const { data: dbStats } = useDashboardStats();
   const [activities, setActivities] = useState(mockActivities);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
@@ -50,19 +47,7 @@ export default function Dashboard() {
     conversionRate: dbStats?.conversionRate ?? 0,
   };
 
-  // Realtime: 当 customers / inquiries / messages 变化时刷新统计
-  useEffect(() => {
-    const channel = supabase
-      .channel("dashboard-stats")
-      .on("postgres_changes", { event: "*", schema: "public", table: "customers" },
-        () => qc.invalidateQueries({ queryKey: ["dashboard-stats"] }))
-      .on("postgres_changes", { event: "*", schema: "public", table: "inquiries" },
-        () => qc.invalidateQueries({ queryKey: ["dashboard-stats"] }))
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" },
-        () => qc.invalidateQueries({ queryKey: ["dashboard-stats"] }))
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [qc]);
+  // Stats polling handled by useDashboardStats refetchInterval
 
   useEffect(() => {
     const names = ["David Lee", "Emma Brown", "Carlos Ruiz", "Yuki Tanaka"];

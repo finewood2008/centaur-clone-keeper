@@ -1,226 +1,181 @@
-/**
- * useProducts - 产品数据 CRUD hook
- * 连接 Supabase products + product_specs + product_images + product_docs
- */
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api-client';
 
-export type Product = Tables<"products">;
-export type ProductSpec = Tables<"product_specs">;
-export type ProductImage = Tables<"product_images">;
-export type ProductDoc = Tables<"product_docs">;
-export type ProductInsert = TablesInsert<"products">;
-export type ProductUpdate = TablesUpdate<"products">;
+// ---------- Types ----------
 
-export interface ProductWithDetails extends Product {
+export interface Product {
+  id: string;
+  user_id: string;
+  name: string;
+  category: string;
+  sku: string;
+  price: number;
+  currency: string;
+  moq: number;
+  stock: number;
+  image_url: string;
+  has_bot: boolean;
+  views: number;
+  inquiries_count: number;
+  factory_name: string;
+  factory_rating: number;
+  factory_certs: string[];
+  description: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductSpec {
+  id: string;
+  product_id: string;
+  label: string;
+  value: string;
+  sort_order: number;
+}
+
+export interface ProductImage {
+  id: string;
+  product_id: string;
+  url: string;
+  sort_order: number;
+}
+
+export interface ProductDoc {
+  id: string;
+  product_id: string;
+  name: string;
+  file_size: number;
+  url: string;
+  sort_order: number;
+}
+
+export interface ProductWithRelations extends Product {
   specs: ProductSpec[];
   images: ProductImage[];
   docs: ProductDoc[];
 }
 
+export type CreateProductInput = Omit<Product, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
+export type UpdateProductInput = Partial<CreateProductInput>;
+
+// ---------- Queries ----------
+
 export function useProducts() {
-  return useQuery({
-    queryKey: ["products"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      return data as Product[];
-    },
+  return useQuery<Product[]>({
+    queryKey: ['products'],
+    queryFn: () => apiFetch<Product[]>('/products'),
   });
 }
 
-export function useProductWithDetails(id: string | undefined) {
-  return useQuery({
-    queryKey: ["products", id, "details"],
-    queryFn: async () => {
-      if (!id) return null;
-
-      const [productRes, specsRes, imagesRes, docsRes] = await Promise.all([
-        supabase.from("products").select("*").eq("id", id).single(),
-        supabase.from("product_specs").select("*").eq("product_id", id).order("sort_order"),
-        supabase.from("product_images").select("*").eq("product_id", id).order("sort_order"),
-        supabase.from("product_docs").select("*").eq("product_id", id).order("sort_order"),
-      ]);
-
-      if (productRes.error) throw productRes.error;
-
-      return {
-        ...productRes.data,
-        specs: specsRes.data ?? [],
-        images: imagesRes.data ?? [],
-        docs: docsRes.data ?? [],
-      } as ProductWithDetails;
-    },
+export function useProduct(id: string | undefined) {
+  return useQuery<ProductWithRelations>({
+    queryKey: ['product', id],
+    queryFn: () => apiFetch<ProductWithRelations>(`/products/${id}`),
     enabled: !!id,
   });
 }
 
+// ---------- Product CRUD Mutations ----------
+
 export function useCreateProduct() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (product: Omit<ProductInsert, "user_id">) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("未登录");
-      const { data, error } = await supabase
-        .from("products")
-        .insert({ ...product, user_id: user.id })
-        .select()
-        .single();
-      if (error) throw error;
-      return data as Product;
+  const queryClient = useQueryClient();
+
+  return useMutation<Product, Error, CreateProductInput>({
+    mutationFn: (data) =>
+      apiFetch<Product>('/products', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
   });
 }
 
 export function useUpdateProduct() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, ...updates }: ProductUpdate & { id: string }) => {
-      const { data, error } = await supabase
-        .from("products")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as Product;
-    },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["products"] });
-      qc.invalidateQueries({ queryKey: ["products", vars.id, "details"] });
+  const queryClient = useQueryClient();
+
+  return useMutation<Product, Error, { id: string; data: UpdateProductInput }>({
+    mutationFn: ({ id, data }) =>
+      apiFetch<Product>(`/products/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['product', variables.id] });
     },
   });
 }
 
 export function useDeleteProduct() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("products").delete().eq("id", id);
-      if (error) throw error;
+  const queryClient = useQueryClient();
+
+  return useMutation<{ deleted: true }, Error, string>({
+    mutationFn: (id) =>
+      apiFetch<{ deleted: true }>(`/products/${id}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
   });
 }
 
-/* ----------------------- specs ----------------------- */
+// ---------- Product Relations Mutations ----------
 
-export interface SpecInput { label: string; value: string }
-
-/** 全量替换某产品的规格列表（先删后插，简单可靠） */
 export function useReplaceProductSpecs() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ productId, specs }: { productId: string; specs: SpecInput[] }) => {
-      const del = await supabase.from("product_specs").delete().eq("product_id", productId);
-      if (del.error) throw del.error;
-      if (specs.length > 0) {
-        const rows = specs.map((s, i) => ({
-          product_id: productId,
-          label: s.label,
-          value: s.value,
-          sort_order: i,
-        }));
-        const ins = await supabase.from("product_specs").insert(rows);
-        if (ins.error) throw ins.error;
-      }
+  const queryClient = useQueryClient();
+
+  return useMutation<ProductSpec[], Error, { id: string; specs: { label: string; value: string; sort_order: number }[] }>({
+    mutationFn: ({ id, specs }) =>
+      apiFetch<ProductSpec[]>(`/products/${id}/specs`, {
+        method: 'PUT',
+        body: JSON.stringify({ specs }),
+      }),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['product', variables.id] });
     },
-    onSuccess: (_d, vars) =>
-      qc.invalidateQueries({ queryKey: ["products", vars.productId, "details"] }),
   });
 }
-
-/* ----------------------- images ----------------------- */
-
-export interface ImageInput { url: string }
 
 export function useReplaceProductImages() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ productId, images }: { productId: string; images: ImageInput[] }) => {
-      const del = await supabase.from("product_images").delete().eq("product_id", productId);
-      if (del.error) throw del.error;
-      if (images.length > 0) {
-        const rows = images.map((im, i) => ({
-          product_id: productId,
-          url: im.url,
-          sort_order: i,
-        }));
-        const ins = await supabase.from("product_images").insert(rows);
-        if (ins.error) throw ins.error;
-      }
+  const queryClient = useQueryClient();
+
+  return useMutation<ProductImage[], Error, { id: string; images: { url: string; sort_order: number }[] }>({
+    mutationFn: ({ id, images }) =>
+      apiFetch<ProductImage[]>(`/products/${id}/images`, {
+        method: 'PUT',
+        body: JSON.stringify({ images }),
+      }),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['product', variables.id] });
     },
-    onSuccess: (_d, vars) =>
-      qc.invalidateQueries({ queryKey: ["products", vars.productId, "details"] }),
   });
 }
-
-/* ----------------------- docs ----------------------- */
-
-export interface DocInput { name: string; url: string; file_size?: string | null }
 
 export function useReplaceProductDocs() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ productId, docs }: { productId: string; docs: DocInput[] }) => {
-      const del = await supabase.from("product_docs").delete().eq("product_id", productId);
-      if (del.error) throw del.error;
-      if (docs.length > 0) {
-        const rows = docs.map((d, i) => ({
-          product_id: productId,
-          name: d.name,
-          url: d.url,
-          file_size: d.file_size ?? null,
-          sort_order: i,
-        }));
-        const ins = await supabase.from("product_docs").insert(rows);
-        if (ins.error) throw ins.error;
-      }
+  const queryClient = useQueryClient();
+
+  return useMutation<ProductDoc[], Error, { id: string; docs: { name: string; file_size: number; url: string; sort_order: number }[] }>({
+    mutationFn: ({ id, docs }) =>
+      apiFetch<ProductDoc[]>(`/products/${id}/docs`, {
+        method: 'PUT',
+        body: JSON.stringify({ docs }),
+      }),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['product', variables.id] });
     },
-    onSuccess: (_d, vars) =>
-      qc.invalidateQueries({ queryKey: ["products", vars.productId, "details"] }),
   });
 }
 
-/* ----------------------- storage helpers ----------------------- */
+// ---------- File Upload Stubs ----------
 
-function fmtFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+export function uploadProductImage(_productId: string, _file: File): Promise<ProductImage> {
+  throw new Error('File upload not yet supported in local mode');
 }
 
-/** 上传产品图片到 Storage，返回公开 URL */
-export async function uploadProductImage(file: File): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("未登录");
-  const ext = file.name.split(".").pop() || "jpg";
-  const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const { error } = await supabase.storage.from("product-images").upload(path, file, {
-    cacheControl: "3600",
-    upsert: false,
-  });
-  if (error) throw error;
-  const { data } = supabase.storage.from("product-images").getPublicUrl(path);
-  return data.publicUrl;
-}
-
-/** 上传产品文档到 Storage，返回 { url, file_size } */
-export async function uploadProductDoc(file: File): Promise<{ url: string; file_size: string }> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("未登录");
-  const safeName = file.name.replace(/[^\w.\-]+/g, "_");
-  const path = `${user.id}/${Date.now()}-${safeName}`;
-  const { error } = await supabase.storage.from("product-docs").upload(path, file, {
-    cacheControl: "3600",
-    upsert: false,
-  });
-  if (error) throw error;
-  const { data } = supabase.storage.from("product-docs").getPublicUrl(path);
-  return { url: data.publicUrl, file_size: fmtFileSize(file.size) };
+export function uploadProductDoc(_productId: string, _file: File): Promise<ProductDoc> {
+  throw new Error('File upload not yet supported in local mode');
 }

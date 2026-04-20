@@ -1,88 +1,89 @@
-/**
- * useCustomers - 客户数据 CRUD hook
- * 连接 Supabase customers 表
- */
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api-client';
 
-export type Customer = Tables<"customers">;
-export type CustomerInsert = TablesInsert<"customers">;
-export type CustomerUpdate = TablesUpdate<"customers">;
+export interface Customer {
+  id: string;
+  user_id: string;
+  name: string;
+  company: string;
+  country: string;
+  email: string;
+  phone: string;
+  tier: string;
+  ai_score: number;
+  channels: string;   // JSON array stored as text
+  tags: string;        // JSON array stored as text
+  status: string;
+  total_orders: number;
+  total_value: number;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CreateCustomerInput = Omit<Customer, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
+export type UpdateCustomerInput = Partial<CreateCustomerInput>;
+
+// ---------- Queries ----------
 
 export function useCustomers() {
-  return useQuery({
-    queryKey: ["customers"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("customers")
-        .select("*")
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      return data as Customer[];
-    },
+  return useQuery<Customer[]>({
+    queryKey: ['customers'],
+    queryFn: () => apiFetch<Customer[]>('/customers'),
   });
 }
 
 export function useCustomer(id: string | undefined) {
-  return useQuery({
-    queryKey: ["customers", id],
-    queryFn: async () => {
-      if (!id) return null;
-      const { data, error } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("id", id)
-        .single();
-      if (error) throw error;
-      return data as Customer;
-    },
+  return useQuery<Customer>({
+    queryKey: ['customer', id],
+    queryFn: () => apiFetch<Customer>(`/customers/${id}`),
     enabled: !!id,
   });
 }
 
+// ---------- Mutations ----------
+
 export function useCreateCustomer() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (customer: Omit<CustomerInsert, "user_id">) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("未登录");
-      const { data, error } = await supabase
-        .from("customers")
-        .insert({ ...customer, user_id: user.id })
-        .select()
-        .single();
-      if (error) throw error;
-      return data as Customer;
+  const queryClient = useQueryClient();
+
+  return useMutation<Customer, Error, CreateCustomerInput>({
+    mutationFn: (data) =>
+      apiFetch<Customer>('/customers', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["customers"] }),
   });
 }
 
 export function useUpdateCustomer() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, ...updates }: CustomerUpdate & { id: string }) => {
-      const { data, error } = await supabase
-        .from("customers")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as Customer;
+  const queryClient = useQueryClient();
+
+  return useMutation<Customer, Error, { id: string; data: UpdateCustomerInput }>({
+    mutationFn: ({ id, data }) =>
+      apiFetch<Customer>(`/customers/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['customer', variables.id] });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["customers"] }),
   });
 }
 
 export function useDeleteCustomer() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("customers").delete().eq("id", id);
-      if (error) throw error;
+  const queryClient = useQueryClient();
+
+  return useMutation<{ deleted: true }, Error, string>({
+    mutationFn: (id) =>
+      apiFetch<{ deleted: true }>(`/customers/${id}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["customers"] }),
   });
 }

@@ -1,7 +1,7 @@
 /**
  * Inbox - 非IM询盘中心（独立站、Email、社媒私信）
  * 左侧消息列表 + 右侧对话详情 + AI回复功能
- * 数据源：Supabase inquiries + messages
+ * 数据源：Local REST API inquiries + messages
  */
 import { useState, useRef, useCallback, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -14,6 +14,7 @@ import EmailRichEditor, { type EmailRichEditorRef } from "@/components/EmailRich
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import ApiKeyBanner from "@/components/ApiKeyBanner";
+import { apiFetch } from "@/lib/api-client";
 import {
   useInquiries,
   useMessages,
@@ -127,77 +128,16 @@ export default function Inbox() {
       setAiConfidence(Math.floor(Math.random() * 10 + 85));
 
       try {
-        // 直接从 Supabase 读历史消息，避免依赖 react-query 缓存时序
-        const { supabase } = await import("@/integrations/supabase/client");
-        const { data: msgs } = await supabase
-          .from("messages")
-          .select("sender, text")
-          .eq("inquiry_id", inquiryId)
-          .order("created_at", { ascending: true });
+        // Fetch message history from local API
+        const data = await apiFetch<{ messages: any[] }>('/inquiries/' + inquiryId);
+        const chatHistory = (data?.messages ?? []).map((m: any) => ({ sender: m.sender, text: m.text }));
 
-        const chatHistory = (msgs ?? []).map((m) => ({ sender: m.sender, text: m.text }));
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-reply`;
-
-        const resp = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            "x-google-api-key": googleApiKey,
-          },
-          body: JSON.stringify({
-            customerName: inquiry.name,
-            company: inquiry.company ?? "",
-            channel: inquiry.channel ?? "Email",
-            messages: chatHistory,
-            aiScore: inquiry.ai_score ?? 0,
-          }),
-          signal: controller.signal,
+        // AI reply generation — placeholder for local mode
+        toast({
+          title: "AI回复功能",
+          description: "AI reply feature coming soon",
         });
-
-        if (!resp.ok) {
-          const errData = await resp.json().catch(() => ({}));
-          throw new Error(errData.error || `请求失败 (${resp.status})`);
-        }
-        if (!resp.body) throw new Error("No response body");
-
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let textBuffer = "";
-        let fullText = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          textBuffer += decoder.decode(value, { stream: true });
-
-          let newlineIndex: number;
-          while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-            let line = textBuffer.slice(0, newlineIndex);
-            textBuffer = textBuffer.slice(newlineIndex + 1);
-
-            if (line.endsWith("\r")) line = line.slice(0, -1);
-            if (line.startsWith(":") || line.trim() === "") continue;
-            if (!line.startsWith("data: ")) continue;
-
-            const jsonStr = line.slice(6).trim();
-            if (jsonStr === "[DONE]") break;
-
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const content =
-                (parsed.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined) ||
-                (parsed.choices?.[0]?.delta?.content as string | undefined);
-              if (content) {
-                fullText += content;
-                setAiReply(fullText);
-              }
-            } catch {
-              textBuffer = line + "\n" + textBuffer;
-              break;
-            }
-          }
-        }
+        setAiReply("（AI 智能回复功能即将上线，敬请期待）");
         setIsGenerating(false);
       } catch (err: any) {
         if (err.name === "AbortError") return;

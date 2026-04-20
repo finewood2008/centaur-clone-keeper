@@ -1,69 +1,82 @@
-/**
- * useAuth - 认证 hook
- * 管理 Supabase Auth 状态（登录、注册、登出、会话监听）
- */
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { User, Session } from "@supabase/supabase-js";
+import { useState, useEffect, useCallback } from 'react';
+import { apiFetch, setToken, clearToken, hasToken, getToken } from '@/lib/api-client';
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  full_name: string;
+  company_name: string;
+  has_api_key: boolean;
+}
+
+export interface Session {
+  token: string;
+}
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // On mount: validate existing token
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const init = async () => {
+      if (!hasToken()) {
+        setLoading(false);
+        return;
+      }
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      try {
+        const currentUser = await apiFetch<AuthUser>('/auth/me');
+        const token = getToken()!;
+        setUser(currentUser);
+        setSession({ token });
+      } catch {
+        // Token is invalid or expired — clear it
+        clearToken();
+        setUser(null);
+        setSession(null);
+      } finally {
         setLoading(false);
       }
-    );
+    };
 
-    return () => subscription.unsubscribe();
+    init();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-      },
+  const signIn = useCallback(async (email: string, password: string) => {
+    const result = await apiFetch<{ token: string; user: AuthUser }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
     });
-    if (error) throw error;
-    return data;
-  };
 
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    setToken(result.token);
+    setUser(result.user);
+    setSession({ token: result.token });
+
+    return result;
+  }, []);
+
+  const signUp = useCallback(async (email: string, password: string, full_name: string) => {
+    const result = await apiFetch<{ token: string; user: AuthUser }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, full_name }),
     });
-    if (error) throw error;
-    return data;
-  };
 
-  const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-  };
+    setToken(result.token);
+    setUser(result.user);
+    setSession({ token: result.token });
 
-  return {
-    user,
-    session,
-    loading,
-    signUp,
-    signIn,
-    signOut,
-    isAuthenticated: !!session,
-  };
+    return result;
+  }, []);
+
+  const signOut = useCallback(() => {
+    clearToken();
+    setUser(null);
+    setSession(null);
+  }, []);
+
+  const isAuthenticated = !!session;
+
+  return { user, session, loading, signUp, signIn, signOut, isAuthenticated };
 }
