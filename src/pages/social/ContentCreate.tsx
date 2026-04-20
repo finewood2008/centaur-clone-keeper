@@ -11,6 +11,8 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useApiKey } from "@/hooks/use-api-key";
+import { callGemini, toGeminiMessages, GeminiError } from "@/lib/gemini";
 
 const sampleImages = [
   { id: "1", src: "https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?w=300&h=300&fit=crop", name: "LED灯A" },
@@ -31,6 +33,7 @@ const mockCaptions: Record<string, string> = {
 };
 
 export default function ContentCreate() {
+  const { apiKey, model, hasKey } = useApiKey();
   const [step, setStep] = useState(1);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [theme, setTheme] = useState("");
@@ -48,15 +51,52 @@ export default function ContentCreate() {
     );
   };
 
-  const generateCaption = useCallback(() => {
+  const generateCaption = useCallback(async () => {
+    if (!hasKey) {
+      toast({
+        title: "请先配置 Google AI API Key",
+        description: "前往设置页配置后即可使用 AI 文案生成",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!theme || !style) return;
+
     setIsGenerating(true);
-    setTimeout(() => {
-      const text = mockCaptions[theme] || mockCaptions.default;
+    try {
+      const imgNames = selectedImages
+        .map((id) => sampleImages.find((i) => i.id === id)?.name)
+        .filter(Boolean)
+        .join("、");
+
+      const systemInstruction = `你是一位资深 B2B 外贸社媒文案专家，擅长为中国制造商撰写吸引海外采购商的高质量 LinkedIn / Facebook / Instagram 帖文。要求：
+- 直接输出最终文案，不要任何前后缀或说明。
+- 包含合适的 emoji、分点列表、清晰的 CTA 与 3-6 个相关 hashtag。
+- 长度 120-220 字，简体中文为主，可混入英文专业术语。`;
+
+      const prompt = `请基于以下信息撰写一条社媒帖文：
+【主题】${theme}
+【风格】${style}
+【配图素材】${imgNames || "无"}
+【补充说明】${notes || "无"}`;
+
+      const text = await callGemini(
+        apiKey,
+        toGeminiMessages([{ role: "user", content: prompt }]),
+        { model, systemInstruction, temperature: 0.85, maxOutputTokens: 1024 }
+      );
+
+      if (!text.trim()) throw new Error("AI 未返回有效内容");
       setCaption(text);
       setPlatformCaptions({ linkedin: text, facebook: text, instagram: text });
+      toast({ title: "AI 文案生成完成", description: `主题：${theme} · 风格：${style}` });
+    } catch (e) {
+      const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "生成失败";
+      toast({ title: "AI 生成失败", description: msg, variant: "destructive" });
+    } finally {
       setIsGenerating(false);
-    }, 1500);
-  }, [theme]);
+    }
+  }, [apiKey, model, hasKey, theme, style, notes, selectedImages]);
 
   const handlePublish = () => {
     toast({

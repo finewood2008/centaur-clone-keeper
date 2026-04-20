@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useApiKey } from "@/hooks/use-api-key";
+import { callGemini, toGeminiMessages, GeminiError } from "@/lib/gemini";
 
 const emailTypes = [
   { value: "cold", label: "开发信 (Cold Email)" },
@@ -50,6 +52,7 @@ const sequenceSteps = [
 ];
 
 export default function EmailCreate() {
+  const { apiKey, model, hasKey } = useApiKey();
   const [step, setStep] = useState(1);
   const [campaignName, setCampaignName] = useState("");
   const [emailType, setEmailType] = useState("cold");
@@ -156,28 +159,62 @@ export default function EmailCreate() {
 
 
   const handleGenerate = async () => {
+    if (!hasKey) {
+      toast.error("请先配置 Google AI API Key", {
+        description: "前往设置页配置后即可使用 AI 邮件生成",
+      });
+      return;
+    }
     setIsGenerating(true);
-    await new Promise((r) => setTimeout(r, 2000));
-    setSubject("5 Year Warranty LED Bulbs - Factory Direct Pricing");
-    setBody(`Hi {{firstName}},
+    try {
+      const typeLabel = emailTypes.find((t) => t.value === emailType)?.label || emailType;
+      const audienceLabel = audiences.find((a) => a.value === audience)?.label || audience;
+      const toneLabel = toneOptions.find((t) => t.value === tone)?.label || tone;
+      const lengthLabel = lengthOptions.find((l) => l.value === length)?.label || length;
 
-I noticed your company {{companyName}} specializes in {{industry}}. We're a leading LED manufacturer offering 5-year warranty and factory-direct pricing.
+      const systemInstruction = `You are a senior B2B foreign-trade email copywriter for a Chinese LED manufacturer (OPC LED Technology Co., Ltd.). Write high-converting cold/follow-up emails that pass spam filters and feel personal.
 
-Our clients typically save 30-40% on lighting costs. Would you be interested in a quick call to discuss how we can help?
+CRITICAL OUTPUT FORMAT — return EXACTLY two sections separated by a single line "---":
+SUBJECT: <one-line subject, no quotes>
+---
+<email body in plain text English with personalization variables>
 
-Key advantages:
-• 5-year warranty on all products
-• Factory-direct pricing (no middlemen)
-• MOQ as low as 100 pieces
-• Free samples available
+Allowed variables: {{firstName}}, {{companyName}}, {{industry}}, {{senderName}}.
+- Sign off as {{senderName}}.
+- Avoid spam-trigger words like "free", "save 30%", "guarantee", all-caps.
+- Use bullet points sparingly. End with a soft CTA.`;
 
-Looking forward to hearing from you.
+      const prompt = `Generate one ${typeLabel} email.
+Target audience: ${audienceLabel}
+Tone: ${toneLabel}
+Length: ${lengthLabel}
+Personalization level: ${personalization[0]}/100
+Extra context from sender: ${extraInfo || "(none)"}`;
 
-Best regards,
-{{senderName}}`);
-    setGenerated(true);
-    setIsGenerating(false);
-    toast.success("邮件已生成！");
+      const text = await callGemini(
+        apiKey,
+        toGeminiMessages([{ role: "user", content: prompt }]),
+        { model, systemInstruction, temperature: 0.8, maxOutputTokens: 1500 }
+      );
+
+      // Parse SUBJECT / body
+      const subjMatch = text.match(/SUBJECT\s*:\s*(.+)/i);
+      const parts = text.split(/^---\s*$/m);
+      const parsedSubject = subjMatch?.[1]?.trim().replace(/^["']|["']$/g, "") || "";
+      const parsedBody = (parts[1] || text.replace(/SUBJECT\s*:\s*.+/i, "")).trim();
+
+      if (!parsedSubject || !parsedBody) throw new Error("AI 返回格式异常，请重试");
+
+      setSubject(parsedSubject);
+      setBody(parsedBody);
+      setGenerated(true);
+      toast.success("邮件已生成！");
+    } catch (e) {
+      const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "生成失败";
+      toast.error("AI 生成失败", { description: msg });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleSend = async () => {
