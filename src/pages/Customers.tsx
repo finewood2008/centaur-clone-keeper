@@ -1025,6 +1025,8 @@ export default function Customers() {
           </div>
         </div>
       )}
+
+      <NewCustomerDialog open={showNewCustomer} onOpenChange={setShowNewCustomer} />
     </>
   );
 }
