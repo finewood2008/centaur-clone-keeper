@@ -438,6 +438,54 @@ Now write Email ${stepNum} (${seqMeta.name}).`;
     setEditingSeqStep(null);
   };
 
+  const handleRecommendSendTime = async (stepNum: number) => {
+    if (!hasKey) {
+      toast.error("请先配置 Google AI API Key", { description: "前往设置页配置后即可使用 AI 时机推荐" });
+      return;
+    }
+    const seqMeta = sequenceSteps.find((s) => s.step === stepNum);
+    if (!seqMeta) return;
+    const audienceLabel = audiences.find((a) => a.value === audience)?.label || audience;
+
+    setRecommendingTimeStep(stepNum);
+    try {
+      const systemInstruction = `You are a B2B email-marketing send-time optimizer. Recommend the optimal send time for ONE sequence email, based on the audience's primary business timezone and proven cold-email open-rate research (Tuesday/Wednesday/Thursday 9-11 AM local time typically peak for B2B; Mondays before 9 AM and Fridays after 3 PM perform worst; first emails benefit from morning slots; later follow-ups can use mid-morning or post-lunch).
+
+Return ONLY a JSON object — no prose, no markdown fences:
+{
+  "localTime": "<HH:MM in 24h, recipient local time>",
+  "weekday": "<one of: 周一|周二|周三|周四|周五>",
+  "tz": "<IANA-style label, e.g. America/New_York (EST/EDT) or Europe/London (GMT/BST) — pick the dominant timezone of the audience>",
+  "reason": "<one short Chinese sentence justifying this time given the audience and email purpose>"
+}`;
+
+      const prompt = `Sequence email metadata:
+- Step: ${seqMeta.step} (${seqMeta.name})
+- Delay: ${seqMeta.delay}
+- Trigger: ${seqMeta.condition}
+- Audience: ${audienceLabel}
+
+Recommend the best local send time and weekday for this audience.`;
+
+      const raw = await callGemini(
+        apiKey,
+        toGeminiMessages([{ role: "user", content: prompt }]),
+        { model, systemInstruction, temperature: 0.3, maxOutputTokens: 400 }
+      );
+      const parsed = parseJsonFromAI<SendTimeRec>(raw);
+      if (!parsed.localTime || !parsed.weekday || !parsed.tz) {
+        throw new Error("AI 返回缺少字段");
+      }
+      setSendTimeRecs((prev) => ({ ...prev, [stepNum]: parsed }));
+      toast.success(`第 ${stepNum} 封建议 ${parsed.weekday} ${parsed.localTime} 发送`);
+    } catch (e) {
+      const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "推荐失败";
+      toast.error("AI 推荐发送时机失败", { description: msg });
+    } finally {
+      setRecommendingTimeStep(null);
+    }
+  };
+
   const handleSend = async () => {
     toast.loading("正在发送邮件...");
     await new Promise((r) => setTimeout(r, 3000));
