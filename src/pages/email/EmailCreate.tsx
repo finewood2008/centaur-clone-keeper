@@ -732,6 +732,72 @@ ${ctx}`;
         </div>
       )}
 
+      {/* Sequence Step Edit Dialog */}
+      <Dialog open={editingStep !== null} onOpenChange={(o) => !o && setEditingStep(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="font-display text-sm flex items-center gap-2">
+              <Pencil className="w-4 h-4 text-primary" />
+              编辑跟进邮件 · 第 {editingStep} 封
+              {editingStep !== null && (
+                <Badge variant="outline" className="text-[10px] h-4 ml-1">
+                  {sequenceSteps.find((s) => s.step === editingStep)?.name} · {sequenceSteps.find((s) => s.step === editingStep)?.delay}
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {editingStep !== null && sequenceDrafts[editingStep] && (
+            <div className="flex-1 overflow-auto space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">主题行</Label>
+                <Input
+                  value={sequenceDrafts[editingStep].subject}
+                  onChange={(e) =>
+                    setSequenceDrafts((prev) => ({
+                      ...prev,
+                      [editingStep]: { ...prev[editingStep], subject: e.target.value },
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">邮件正文</Label>
+                <Textarea
+                  value={sequenceDrafts[editingStep].body}
+                  onChange={(e) =>
+                    setSequenceDrafts((prev) => ({
+                      ...prev,
+                      [editingStep]: { ...prev[editingStep], body: e.target.value },
+                    }))
+                  }
+                  className="min-h-[260px] text-xs font-mono"
+                />
+              </div>
+              <div className="flex justify-between pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const s = sequenceSteps.find((x) => x.step === editingStep);
+                    if (s) handleSequenceGenerate(s);
+                  }}
+                  disabled={generatingStep !== null}
+                >
+                  {generatingStep === editingStep ? (
+                    <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />重新生成中</>
+                  ) : (
+                    <><RefreshCw className="w-3.5 h-3.5 mr-1" />AI 重新生成</>
+                  )}
+                </Button>
+                <Button size="sm" onClick={() => { setEditingStep(null); toast.success("已保存修改"); }}>
+                  <Check className="w-3.5 h-3.5 mr-1" />保存
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Email Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
