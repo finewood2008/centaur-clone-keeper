@@ -21,6 +21,7 @@ import {
   useUpdateInquiry,
 } from "@/hooks/use-inquiries";
 import type { Inquiry, Message } from "@/hooks/use-inquiries";
+import { useInboxRealtime } from "@/hooks/use-inbox-realtime";
 
 type InquiryChannel = "Email" | "独立站" | "Instagram" | "Facebook" | "Twitter";
 
@@ -83,6 +84,9 @@ export default function Inbox() {
   const abortRef = useRef<AbortController | null>(null);
 
   const { data: messages = [] } = useMessages(selectedId ?? undefined);
+
+  // 实时订阅：新询盘 / 新消息自动推送
+  useInboxRealtime(selectedId);
 
   const selectedInquiry = useMemo(
     () => inquiries.find((m) => m.id === selectedId) ?? null,
