@@ -31,12 +31,8 @@ const fadeUp = {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    inquiries: 26,
-    automationRate: 84,
-    avgResponseTime: 8,
-    satisfaction: 4.7,
-  });
+  const qc = useQueryClient();
+  const { data: dbStats } = useDashboardStats();
   const [activities, setActivities] = useState(mockActivities);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [strategyDrawerOpen, setStrategyDrawerOpen] = useState(false);
@@ -44,16 +40,29 @@ export default function Dashboard() {
   const [satisfactionDialogOpen, setSatisfactionDialogOpen] = useState(false);
   const [inquiryDialogOpen, setInquiryDialogOpen] = useState(false);
 
+  const stats = {
+    inquiries: dbStats?.monthlyInquiries ?? 0,
+    automationRate: dbStats?.automationRate ?? 0,
+    avgResponseTime: 8,
+    satisfaction: 4.7,
+    totalCustomers: dbStats?.totalCustomers ?? 0,
+    monthlyInquiries: dbStats?.monthlyInquiries ?? 0,
+    conversionRate: dbStats?.conversionRate ?? 0,
+  };
+
+  // Realtime: 当 customers / inquiries / messages 变化时刷新统计
   useEffect(() => {
-    const interval = setInterval(() => {
-      setStats((prev) => ({
-        ...prev,
-        inquiries: prev.inquiries + Math.floor(Math.random() * 3),
-        automationRate: Math.min(99, prev.automationRate + (Math.random() > 0.5 ? 1 : 0)),
-      }));
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    const channel = supabase
+      .channel("dashboard-stats")
+      .on("postgres_changes", { event: "*", schema: "public", table: "customers" },
+        () => qc.invalidateQueries({ queryKey: ["dashboard-stats"] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "inquiries" },
+        () => qc.invalidateQueries({ queryKey: ["dashboard-stats"] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" },
+        () => qc.invalidateQueries({ queryKey: ["dashboard-stats"] }))
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [qc]);
 
   useEffect(() => {
     const names = ["David Lee", "Emma Brown", "Carlos Ruiz", "Yuki Tanaka"];
