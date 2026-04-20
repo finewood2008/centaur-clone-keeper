@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useProduct } from "@/hooks/use-products";
 import type { Product, ProductWithRelations } from "@/hooks/use-products";
+import { streamGemini, toGeminiMessages } from "@/lib/gemini";
+import { getStoredApiKey, getStoredModel } from "@/hooks/use-api-key";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -126,27 +128,45 @@ export default function ProductDetail({
         abortRef.current = new AbortController();
         const specsStr = (detail?.specs ?? []).map((s) => `${s.label}: ${s.value}`).join(", ");
 
-        // AI product assistant — placeholder for local mode
-        toast.info("AI product assistant coming soon");
+        const systemInstruction = `你是产品 "${product.name}" 的专属AI助手，由 ${factoryName} 提供支持。
 
-        // Simulate a basic response using product info
-        const simulatedReply = `关于 **${product.name}** 的问题，以下是基本信息：\n\n` +
-          `• 价格: ${priceLabel}\n` +
-          `• MOQ: ${product.moq ?? "—"}\n` +
-          `• 工厂: ${factoryName}\n` +
-          (specsStr ? `• 规格: ${specsStr}\n` : "") +
-          `\n完整 AI 产品助手功能即将上线，届时将提供更智能的解答。`;
+产品信息：
+- 名称：${product.name}
+- 价格：${priceLabel}
+- MOQ：${product.moq ?? "待定"}
+- 工厂：${factoryName}
+- 分类：${product.category ?? "未分类"}
+${specsStr ? `- 规格：${specsStr}` : ""}
+${product.description ? `- 描述：${product.description}` : ""}
 
-        // Simulate streaming effect
-        let accumulated = "";
-        for (const char of simulatedReply) {
-          accumulated += char;
+你的职责：
+1. 专业解答关于该产品的任何问题（规格、价格、定制、交期等）
+2. 如果用户问推荐同类产品，简要说明并建议查看同品类
+3. 回答要简洁、专业、有帮助
+4. 使用中文回复
+5. 不要使用markdown格式`;
+
+        const chatMessages = allMessages.map((m) => ({
+          role: m.role === "user" ? "user" as const : "assistant" as const,
+          content: m.content,
+        }));
+
+        // Stream AI reply via Gemini
+        let fullText = "";
+        const stream = streamGemini(googleApiKey, toGeminiMessages(chatMessages), {
+          model: getStoredModel(),
+          systemInstruction,
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+        });
+
+        for await (const chunk of stream) {
+          fullText += chunk;
           setMessages((prev) => {
             const updated = [...prev];
-            updated[updated.length - 1] = { ...updated[updated.length - 1], content: accumulated };
+            updated[updated.length - 1] = { ...updated[updated.length - 1], content: fullText };
             return updated;
           });
-          await new Promise((r) => setTimeout(r, 10));
         }
       } catch (err: any) {
         console.error("Product bot error:", err);

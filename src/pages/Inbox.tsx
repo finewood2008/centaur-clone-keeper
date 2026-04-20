@@ -23,6 +23,8 @@ import {
 } from "@/hooks/use-inquiries";
 import type { Inquiry, Message } from "@/hooks/use-inquiries";
 import { useInboxRealtime } from "@/hooks/use-inbox-realtime";
+import { streamGemini, toGeminiMessages } from "@/lib/gemini";
+import { getStoredApiKey, getStoredModel } from "@/hooks/use-api-key";
 
 type InquiryChannel = "Email" | "独立站" | "Instagram" | "Facebook" | "Twitter";
 
@@ -130,14 +132,39 @@ export default function Inbox() {
       try {
         // Fetch message history from local API
         const data = await apiFetch<{ messages: any[] }>('/inquiries/' + inquiryId);
-        const chatHistory = (data?.messages ?? []).map((m: any) => ({ sender: m.sender, text: m.text }));
+        const chatHistory = (data?.messages ?? []).map((m: any) => ({
+          role: m.sender === "customer" ? "user" as const : "assistant" as const,
+          content: m.text,
+        }));
 
-        // AI reply generation — placeholder for local mode
-        toast({
-          title: "AI回复功能",
-          description: "AI reply feature coming soon",
+        const systemInstruction = `你是一名专业的跨境电商客服AI助手。你需要根据客户的询盘消息，生成一封专业、友好的回复。
+客户信息：${inquiry.name}${inquiry.company ? ` (${inquiry.company})` : ''}
+渠道：${inquiry.channel || 'Email'}
+${inquiry.subject ? `主题：${inquiry.subject}` : ''}
+
+要求：
+1. 回复要专业、有礼貌、简洁
+2. 根据客户的问题提供有针对性的回答
+3. 如果是询价，给出合理的回应（可以请客户提供更多信息）
+4. 结尾要有明确的行动号召
+5. 使用英文回复（跨境电商场景）
+6. 不要使用markdown格式`;
+
+        // Stream AI reply via Gemini
+        let fullText = "";
+        const stream = streamGemini(googleApiKey, toGeminiMessages(chatHistory), {
+          model: getStoredModel(),
+          systemInstruction,
+          temperature: 0.7,
+          maxOutputTokens: 1024,
         });
-        setAiReply("（AI 智能回复功能即将上线，敬请期待）");
+
+        for await (const chunk of stream) {
+          if (controller.signal.aborted) return;
+          fullText += chunk;
+          setAiReply(fullText);
+        }
+
         setIsGenerating(false);
       } catch (err: any) {
         if (err.name === "AbortError") return;

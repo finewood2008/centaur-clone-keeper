@@ -42,7 +42,7 @@ const mockCaptions: Record<string, string> = {
 };
 
 export default function ContentCreate() {
-  const { apiKey, model, hasKey } = useApiKey();
+  const { apiKey, model, hasApiKey } = useApiKey();
   const [step, setStep] = useState(1);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [theme, setTheme] = useState("");
@@ -63,7 +63,7 @@ export default function ContentCreate() {
   };
 
   const generateCaption = useCallback(async () => {
-    if (!hasKey) {
+    if (!hasApiKey) {
       toast({
         title: "请先配置 Google AI API Key",
         description: "前往设置页配置后即可使用 AI 文案生成",
@@ -128,7 +128,7 @@ export default function ContentCreate() {
     } finally {
       setIsGenerating(false);
     }
-  }, [apiKey, model, hasKey, theme, style, notes, selectedImages]);
+  }, [apiKey, model, hasApiKey, theme, style, notes, selectedImages]);
 
 
   const handlePublish = () => {

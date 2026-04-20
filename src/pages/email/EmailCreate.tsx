@@ -52,7 +52,7 @@ const sequenceSteps = [
 ];
 
 export default function EmailCreate() {
-  const { apiKey, model, hasKey } = useApiKey();
+  const { apiKey, model, hasApiKey } = useApiKey();
   const [step, setStep] = useState(1);
   const [campaignName, setCampaignName] = useState("");
   const [emailType, setEmailType] = useState("cold");
@@ -108,7 +108,7 @@ export default function EmailCreate() {
   };
 
   const handleSpamCheck = async () => {
-    if (!hasKey) {
+    if (!hasApiKey) {
       toast.error("请先配置 Google AI API Key", { description: "前往设置页配置后即可使用 AI 检测" });
       return;
     }
@@ -174,7 +174,7 @@ ${body}`;
   const [isFixing, setIsFixing] = useState(false);
 
   const handleAutoFix = async () => {
-    if (!hasKey || !spamResult) return;
+    if (!hasApiKey || !spamResult) return;
     setIsFixing(true);
     const previousScore = spamResult.score;
     try {
@@ -245,7 +245,7 @@ ${spamResult.suggestions.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
   const predictAbort = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!hasKey || !subject.trim() || step !== 3) {
+    if (!hasApiKey || !subject.trim() || step !== 3) {
       setOpenRate(null);
       return;
     }
@@ -277,11 +277,11 @@ Return ONLY JSON: {"rate": <number 5-75>, "reason": "<one short Chinese sentence
     return () => {
       if (predictTimer.current) clearTimeout(predictTimer.current);
     };
-  }, [subject, hasKey, apiKey, model, step]);
+  }, [subject, hasApiKey, apiKey, model, step]);
 
 
   const handleGenerate = async () => {
-    if (!hasKey) {
+    if (!hasApiKey) {
       toast.error("请先配置 Google AI API Key", {
         description: "前往设置页配置后即可使用 AI 邮件生成",
       });
@@ -340,7 +340,7 @@ Extra context from sender: ${extraInfo || "(none)"}`;
   };
 
   const handleSequenceGenerate = async (stepNum: number) => {
-    if (!hasKey) {
+    if (!hasApiKey) {
       toast.error("请先配置 Google AI API Key", { description: "前往设置页配置后即可使用 AI 序列生成" });
       return;
     }
@@ -439,7 +439,7 @@ Now write Email ${stepNum} (${seqMeta.name}).`;
   };
 
   const handleRecommendSendTime = async (stepNum: number) => {
-    if (!hasKey) {
+    if (!hasApiKey) {
       toast.error("请先配置 Google AI API Key", { description: "前往设置页配置后即可使用 AI 时机推荐" });
       return;
     }
@@ -627,7 +627,7 @@ Recommend the best local send time and weekday for this audience.`;
                     {openRate.reason && <span className="text-muted-foreground">· {openRate.reason}</span>}
                   </>
                 ) : (
-                  <span className="text-muted-foreground">{hasKey ? "修改主题行后自动评估" : "配置 API Key 后自动评估"}</span>
+                  <span className="text-muted-foreground">{hasApiKey ? "修改主题行后自动评估" : "配置 API Key 后自动评估"}</span>
                 )}
               </div>
             </div>
