@@ -1,8 +1,8 @@
 /**
  * EmailCreate - 创建邮件活动（4步流程）
  */
-import { useState } from "react";
-import { Sparkles, ArrowRight, ArrowLeft, Eye, Send, RefreshCw, Check, Monitor, Smartphone, ShieldCheck, AlertTriangle, CheckCircle2, XCircle, Loader2, Wand2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Sparkles, ArrowRight, ArrowLeft, Eye, Send, RefreshCw, Check, Monitor, Smartphone, ShieldCheck, AlertTriangle, CheckCircle2, XCircle, Loader2, Wand2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -69,6 +69,13 @@ export default function EmailCreate() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
 
+  // 跟进序列草稿（按 step 索引：2..5）
+  const [sequenceDrafts, setSequenceDrafts] = useState<
+    Record<number, { subject: string; body: string }>
+  >({});
+  const [generatingStep, setGeneratingStep] = useState<number | null>(null);
+  const [editingStep, setEditingStep] = useState<number | null>(null);
+
   const renderPreviewHtml = () => {
     const filled = body
       .replace(/\{\{firstName\}\}/g, "John")
@@ -86,75 +93,135 @@ export default function EmailCreate() {
     suggestions: string[];
   } | null>(null);
 
+  // Helper: clean fenced JSON from Gemini and parse
+  const parseJsonFromAI = <T,>(raw: string): T => {
+    const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start === -1 || end === -1) throw new Error("AI 未返回 JSON 格式");
+    return JSON.parse(cleaned.slice(start, end + 1)) as T;
+  };
+
   const handleSpamCheck = async () => {
+    if (!hasKey) {
+      toast.error("请先配置 Google AI API Key", { description: "前往设置页配置后即可使用 AI 检测" });
+      return;
+    }
+    if (!subject.trim() || !body.trim()) {
+      toast.error("请先填写邮件主题与正文");
+      return;
+    }
     setSpamChecking(true);
-    await new Promise((r) => setTimeout(r, 1800));
-    setSpamResult({
-      score: 2.1,
-      checks: [
-        { name: "SPF记录", status: "pass", detail: "opcled.com 已配置SPF记录，授权发送服务器" },
-        { name: "DKIM签名", status: "pass", detail: "DKIM签名有效，密钥长度2048位" },
-        { name: "DMARC策略", status: "pass", detail: "DMARC策略设置为quarantine，对齐SPF/DKIM" },
-        { name: "发件人信誉", status: "pass", detail: "域名信誉良好，近30天退信率<1%" },
-        { name: "内容检测", status: "warn", detail: "检测到可能触发垃圾邮件过滤的短语" },
-        { name: "链接安全", status: "pass", detail: "所有链接均使用HTTPS，无黑名单域名" },
-        { name: "HTML/文本比例", status: "pass", detail: "纯文本邮件，比例良好" },
-        { name: "退订链接", status: "pass", detail: "包含退订链接，符合CAN-SPAM要求" },
-        { name: "主题行检测", status: "warn", detail: "主题行包含大写字母，部分邮箱可能标记" },
-      ],
-      suggestions: [
-        "避免在正文中使用\"save\"、\"discount\"等促销敏感词，改用更自然的表述",
-        "主题行建议避免全大写单词，改为首字母大写以降低垃圾邮件评分",
-        "建议添加发件人物理地址以完全符合CAN-SPAM法规",
-        "考虑使用个性化变量替代通用问候语，提升送达率",
-      ],
-    });
-    setSpamChecked(true);
-    setSpamChecking(false);
-    toast.success("垃圾邮件检测完成");
+    try {
+      const systemInstruction = `You are an expert email deliverability auditor. Evaluate a B2B cold email and return ONLY a JSON object — no prose, no markdown fences.
+
+Schema:
+{
+  "score": <number 0-10, lower=better, e.g. 0.8 means very clean, 7+ means likely spam>,
+  "checks": [
+    { "name": "<short Chinese label>", "status": "pass"|"warn"|"fail", "detail": "<one Chinese sentence>" }
+  ],
+  "suggestions": ["<actionable Chinese suggestion>", ...]
+}
+
+Always include these 9 checks (in order, in Chinese): SPF记录, DKIM签名, DMARC策略, 发件人信誉, 内容检测, 链接安全, HTML/文本比例, 退订链接, 主题行检测.
+Assume sender domain opcled.com has SPF/DKIM/DMARC properly configured (these should be "pass" with positive details).
+Focus your scoring mainly on 内容检测 + 主题行检测 based on the actual subject/body provided. Detect spam-trigger words ("free", "save", "guarantee", "%off", all-caps, excessive punctuation), missing physical address, weak unsubscribe.
+Provide 0 suggestions if score <= 1.0; otherwise 2-5 concrete Chinese suggestions.`;
+
+      const prompt = `Evaluate this email:
+SUBJECT: ${subject}
+BODY:
+${body}`;
+
+      const raw = await callGemini(
+        apiKey,
+        toGeminiMessages([{ role: "user", content: prompt }]),
+        { model, systemInstruction, temperature: 0.2, maxOutputTokens: 2048 }
+      );
+
+      const parsed = parseJsonFromAI<{
+        score: number;
+        checks: { name: string; status: "pass" | "warn" | "fail"; detail: string }[];
+        suggestions: string[];
+      }>(raw);
+
+      if (typeof parsed.score !== "number" || !Array.isArray(parsed.checks)) {
+        throw new Error("AI 返回结构异常");
+      }
+
+      setSpamResult({
+        score: Math.max(0, Math.min(10, Number(parsed.score.toFixed(1)))),
+        checks: parsed.checks,
+        suggestions: parsed.suggestions || [],
+      });
+      setSpamChecked(true);
+      toast.success(`AI 垃圾邮件检测完成（评分 ${parsed.score.toFixed(1)}/10）`);
+    } catch (e) {
+      const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "检测失败";
+      toast.error("AI 检测失败", { description: msg });
+    } finally {
+      setSpamChecking(false);
+    }
   };
 
   const [isFixing, setIsFixing] = useState(false);
 
   const handleAutoFix = async () => {
+    if (!hasKey || !spamResult) return;
     setIsFixing(true);
-    toast.loading("AI正在优化邮件内容...");
-    await new Promise((r) => setTimeout(r, 2000));
-    toast.dismiss();
+    const previousScore = spamResult.score;
+    try {
+      const systemInstruction = `You are an expert email deliverability optimizer. Rewrite a B2B cold email so it passes spam filters and keeps the same intent and personalization variables ({{firstName}}, {{companyName}}, {{industry}}, {{senderName}}).
 
-    // Fix subject: convert full-uppercase words to title case
-    setSubject("5 Year Warranty Led Bulbs - Factory Direct Pricing");
+Return ONLY a JSON object — no prose, no markdown fences:
+{
+  "subject": "<optimized subject, no all-caps words, no spam triggers, <= 65 chars>",
+  "body": "<optimized plain-text body in English, keeping all personalization variables, ending with sender signature including company name 'OPC LED Technology Co., Ltd.' and physical address '1088 Nanshan Blvd, Shenzhen, China 518000', and a soft unsubscribe line>",
+  "newScore": <number 0-10, predicted score after fixes, lower=better>,
+  "fixedCount": <integer, number of original suggestions actually addressed>
+}
 
-    // Fix body: replace promotional trigger words and add address
-    setBody((prev) =>
-      prev
-        .replace(/save 30-40%/gi, "reduce costs by 30-40%")
-        .replace(/Hi \{\{firstName\}\}/g, "Hello {{firstName}}")
-        .replace(
-          /Best regards,\n\{\{senderName\}\}/g,
-          "Best regards,\n{{senderName}}\nOPC LED Technology Co., Ltd.\n1088 Nanshan Blvd, Shenzhen, China 518000"
-        )
-    );
+Avoid trigger words: "free", "save X%", "discount", "guarantee", "limited time", excessive "!!" or all-caps.`;
 
-    // Update spam result to reflect fixes
-    setSpamResult({
-      score: 0.8,
-      checks: [
-        { name: "SPF记录", status: "pass", detail: "opcled.com 已配置SPF记录，授权发送服务器" },
-        { name: "DKIM签名", status: "pass", detail: "DKIM签名有效，密钥长度2048位" },
-        { name: "DMARC策略", status: "pass", detail: "DMARC策略设置为quarantine，对齐SPF/DKIM" },
-        { name: "发件人信誉", status: "pass", detail: "域名信誉良好，近30天退信率<1%" },
-        { name: "内容检测", status: "pass", detail: "未检测到垃圾邮件触发词 ✓ 已优化" },
-        { name: "链接安全", status: "pass", detail: "所有链接均使用HTTPS，无黑名单域名" },
-        { name: "HTML/文本比例", status: "pass", detail: "纯文本邮件，比例良好" },
-        { name: "退订链接", status: "pass", detail: "包含退订链接，符合CAN-SPAM要求" },
-        { name: "主题行检测", status: "pass", detail: "主题行格式规范 ✓ 已优化" },
-      ],
-      suggestions: [],
-    });
+      const prompt = `Original email:
+SUBJECT: ${subject}
+BODY:
+${body}
 
-    setIsFixing(false);
-    toast.success("已自动修复4项问题，垃圾邮件评分从 2.1 降至 0.8");
+Issues to fix (in Chinese):
+${spamResult.suggestions.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
+
+      const raw = await callGemini(
+        apiKey,
+        toGeminiMessages([{ role: "user", content: prompt }]),
+        { model, systemInstruction, temperature: 0.4, maxOutputTokens: 2048 }
+      );
+
+      const parsed = parseJsonFromAI<{
+        subject: string; body: string; newScore: number; fixedCount: number;
+      }>(raw);
+      if (!parsed.subject || !parsed.body) throw new Error("AI 返回缺少字段");
+
+      setSubject(parsed.subject);
+      setBody(parsed.body);
+
+      const newScore = Math.max(0, Math.min(10, Number(parsed.newScore.toFixed(1))));
+      setSpamResult({
+        score: newScore,
+        checks: spamResult.checks.map((c) =>
+          c.status === "pass" ? c : { ...c, status: "pass" as const, detail: `${c.detail.split(" ✓")[0]} ✓ 已优化` }
+        ),
+        suggestions: [],
+      });
+
+      toast.success(`已自动修复 ${parsed.fixedCount || spamResult.suggestions.length} 项问题，评分从 ${previousScore} 降至 ${newScore}`);
+    } catch (e) {
+      const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "修复失败";
+      toast.error("AI 修复失败", { description: msg });
+    } finally {
+      setIsFixing(false);
+    }
   };
 
 
@@ -217,11 +284,130 @@ Extra context from sender: ${extraInfo || "(none)"}`;
     }
   };
 
+  // ---------- AI 预测打开率（主题行变化防抖触发） ----------
+  const [openRate, setOpenRate] = useState<{ rate: number; reason: string } | null>(null);
+  const [predicting, setPredicting] = useState(false);
+  const predictTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const predictAbort = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!hasKey || !subject.trim() || step !== 3) {
+      setOpenRate(null);
+      return;
+    }
+    if (predictTimer.current) clearTimeout(predictTimer.current);
+    predictTimer.current = setTimeout(async () => {
+      predictAbort.current?.abort();
+      const ctrl = new AbortController();
+      predictAbort.current = ctrl;
+      setPredicting(true);
+      try {
+        const systemInstruction = `You are an email open-rate prediction model trained on B2B cold-email benchmarks (industry avg ~21%). Given a subject line, predict expected open rate as a percentage and one short Chinese reason.
+Return ONLY JSON: {"rate": <number 5-75>, "reason": "<one short Chinese sentence>"}`;
+        const raw = await callGemini(
+          apiKey,
+          toGeminiMessages([{ role: "user", content: `SUBJECT: ${subject}` }]),
+          { model, systemInstruction, temperature: 0.3, maxOutputTokens: 256 }
+        );
+        if (ctrl.signal.aborted) return;
+        const parsed = parseJsonFromAI<{ rate: number; reason: string }>(raw);
+        setOpenRate({
+          rate: Math.max(0, Math.min(100, Math.round(parsed.rate))),
+          reason: parsed.reason || "",
+        });
+      } catch {
+        if (!ctrl.signal.aborted) setOpenRate(null);
+      } finally {
+        if (!ctrl.signal.aborted) setPredicting(false);
+      }
+    }, 800);
+    return () => {
+      if (predictTimer.current) clearTimeout(predictTimer.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subject, hasKey, apiKey, model, step]);
+
   const handleSend = async () => {
     toast.loading("正在发送邮件...");
     await new Promise((r) => setTimeout(r, 3000));
     toast.dismiss();
     toast.success("邮件发送成功！已向450位客户发送");
+  };
+
+  const handleSequenceGenerate = async (stepInfo: typeof sequenceSteps[number]) => {
+    if (!hasKey) {
+      toast.error("请先配置 Google AI API Key");
+      return;
+    }
+    if (!subject || !body) {
+      toast.error("请先在 Step 2 生成首封邮件，AI 才能基于上下文撰写跟进");
+      return;
+    }
+    setGeneratingStep(stepInfo.step);
+    try {
+      // 已生成的前置邮件作为上下文
+      const previousEmails = [
+        { step: 1, name: "首次开发信", subject, body },
+        ...Object.entries(sequenceDrafts)
+          .filter(([k]) => Number(k) < stepInfo.step)
+          .sort(([a], [b]) => Number(a) - Number(b))
+          .map(([k, v]) => {
+            const meta = sequenceSteps.find((s) => s.step === Number(k))!;
+            return { step: Number(k), name: meta.name, subject: v.subject, body: v.body };
+          }),
+      ];
+
+      const systemInstruction = `You are a senior B2B foreign-trade follow-up copywriter for OPC LED Technology Co., Ltd. Write step-${stepInfo.step} of an automated cold-email sequence.
+
+Rules:
+- Continue naturally from the prior emails — DO NOT repeat the same opener or pitch.
+- Match the named purpose of this step.
+- Keep personalization variables intact: {{firstName}}, {{companyName}}, {{industry}}, {{senderName}}.
+- Avoid spam triggers (no "free", no "save X%", no all-caps).
+- End with a soft, varied CTA (e.g. ask a question, offer a sample, share a case study).
+- Subject should be different from previous steps. <= 65 chars, no all-caps words.
+- Plain-text English body, 80-160 words.
+
+Return ONLY JSON, no markdown fences:
+{"subject": "...", "body": "..."}`;
+
+      const ctx = previousEmails
+        .map(
+          (e) =>
+            `--- Step ${e.step} (${e.name}) ---\nSUBJECT: ${e.subject}\nBODY:\n${e.body}`
+        )
+        .join("\n\n");
+
+      const prompt = `Sequence step to write now:
+- Step number: ${stepInfo.step}
+- Name/purpose: ${stepInfo.name}
+- Send timing: ${stepInfo.delay}
+- Trigger condition: ${stepInfo.condition}
+
+Previous emails in this sequence:
+${ctx}`;
+
+      const raw = await callGemini(
+        apiKey,
+        toGeminiMessages([{ role: "user", content: prompt }]),
+        { model, systemInstruction, temperature: 0.85, maxOutputTokens: 1500 }
+      );
+
+      const parsed = parseJsonFromAI<{ subject: string; body: string }>(raw);
+      if (!parsed.subject || !parsed.body) throw new Error("AI 返回缺少字段");
+
+      setSequenceDrafts((prev) => ({
+        ...prev,
+        [stepInfo.step]: { subject: parsed.subject.trim(), body: parsed.body.trim() },
+      }));
+      setEditingStep(stepInfo.step);
+      toast.success(`第 ${stepInfo.step} 封跟进邮件已生成`);
+    } catch (e) {
+      const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "生成失败";
+      toast.error("AI 生成跟进失败", { description: msg });
+    } finally {
+      setGeneratingStep(null);
+    }
   };
 
   const stepIndicator = (
@@ -333,9 +519,33 @@ Extra context from sender: ${extraInfo || "(none)"}`;
             <div className="space-y-2">
               <Label className="text-xs">主题行</Label>
               <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
-              <div className="flex items-center gap-2 text-[10px]">
+              <div className="flex items-center gap-2 text-[10px] flex-wrap">
                 <span className="text-muted-foreground">AI预测打开率:</span>
-                <Badge variant="outline" className="text-brand-green border-brand-green/30 text-[10px] h-4">38% 🟢 高于行业平均21%</Badge>
+                {predicting ? (
+                  <Badge variant="outline" className="text-muted-foreground text-[10px] h-4 gap-1">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" /> AI 评估中...
+                  </Badge>
+                ) : openRate ? (
+                  <>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] h-4",
+                        openRate.rate >= 30
+                          ? "text-brand-green border-brand-green/30"
+                          : openRate.rate >= 21
+                            ? "text-primary border-primary/30"
+                            : "text-destructive border-destructive/30"
+                      )}
+                    >
+                      {openRate.rate}% {openRate.rate >= 30 ? "🟢" : openRate.rate >= 21 ? "🟡" : "🔴"}{" "}
+                      {openRate.rate >= 21 ? "高于" : "低于"}行业平均21%
+                    </Badge>
+                    {openRate.reason && <span className="text-muted-foreground">· {openRate.reason}</span>}
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">{hasKey ? "修改主题行后自动评估" : "配置 API Key 后自动评估"}</span>
+                )}
               </div>
             </div>
             <div className="space-y-2">
@@ -445,23 +655,58 @@ Extra context from sender: ${extraInfo || "(none)"}`;
 
           {sequenceEnabled && (
             <div className="space-y-2">
-              {sequenceSteps.map((s) => (
-                <div key={s.step} className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/30">
-                  <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                    s.step === 1 ? "bg-brand-green/15 text-brand-green" : "bg-secondary text-muted-foreground"
-                  )}>{s.step}</div>
-                  <div className="flex-1">
-                    <div className="text-xs font-medium">{s.name}</div>
-                    <div className="text-[10px] text-muted-foreground">{s.delay} · {s.condition}</div>
-                  </div>
-                  {s.step > 1 && (
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => toast("AI生成功能即将上线")}>AI生成</Button>
-                      <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => toast("手动编辑功能即将上线")}>编辑</Button>
+              {sequenceSteps.map((s) => {
+                const draft = sequenceDrafts[s.step];
+                const isLoading = generatingStep === s.step;
+                return (
+                  <div key={s.step} className="rounded-lg bg-secondary/30 overflow-hidden">
+                    <div className="flex items-center gap-3 p-2.5">
+                      <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                        s.step === 1 || draft ? "bg-brand-green/15 text-brand-green" : "bg-secondary text-muted-foreground"
+                      )}>{s.step === 1 || draft ? <Check className="w-3.5 h-3.5" /> : s.step}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium flex items-center gap-1.5 flex-wrap">
+                          {s.name}
+                          {draft && <Badge variant="outline" className="text-[9px] h-4 text-brand-green border-brand-green/30">已生成</Badge>}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          {s.delay} · {draft ? draft.subject : s.condition}
+                        </div>
+                      </div>
+                      {s.step > 1 && (
+                        <div className="flex gap-1 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-[10px] px-2"
+                            disabled={isLoading}
+                            onClick={() => handleSequenceGenerate(s)}
+                          >
+                            {isLoading ? (
+                              <><Loader2 className="w-3 h-3 mr-1 animate-spin" />生成中</>
+                            ) : (
+                              <><Sparkles className="w-3 h-3 mr-1" />{draft ? "重新生成" : "AI生成"}</>
+                            )}
+                          </Button>
+                          {draft && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 text-[10px] px-2"
+                              onClick={() => setEditingStep(s.step)}
+                            >
+                              <Pencil className="w-3 h-3 mr-1" />编辑
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                      {s.step === 1 && (
+                        <Badge variant="outline" className="text-[9px] h-4 shrink-0">使用 Step 2 邮件</Badge>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -486,6 +731,72 @@ Extra context from sender: ${extraInfo || "(none)"}`;
           </div>
         </div>
       )}
+
+      {/* Sequence Step Edit Dialog */}
+      <Dialog open={editingStep !== null} onOpenChange={(o) => !o && setEditingStep(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="font-display text-sm flex items-center gap-2">
+              <Pencil className="w-4 h-4 text-primary" />
+              编辑跟进邮件 · 第 {editingStep} 封
+              {editingStep !== null && (
+                <Badge variant="outline" className="text-[10px] h-4 ml-1">
+                  {sequenceSteps.find((s) => s.step === editingStep)?.name} · {sequenceSteps.find((s) => s.step === editingStep)?.delay}
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {editingStep !== null && sequenceDrafts[editingStep] && (
+            <div className="flex-1 overflow-auto space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">主题行</Label>
+                <Input
+                  value={sequenceDrafts[editingStep].subject}
+                  onChange={(e) =>
+                    setSequenceDrafts((prev) => ({
+                      ...prev,
+                      [editingStep]: { ...prev[editingStep], subject: e.target.value },
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">邮件正文</Label>
+                <Textarea
+                  value={sequenceDrafts[editingStep].body}
+                  onChange={(e) =>
+                    setSequenceDrafts((prev) => ({
+                      ...prev,
+                      [editingStep]: { ...prev[editingStep], body: e.target.value },
+                    }))
+                  }
+                  className="min-h-[260px] text-xs font-mono"
+                />
+              </div>
+              <div className="flex justify-between pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const s = sequenceSteps.find((x) => x.step === editingStep);
+                    if (s) handleSequenceGenerate(s);
+                  }}
+                  disabled={generatingStep !== null}
+                >
+                  {generatingStep === editingStep ? (
+                    <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />重新生成中</>
+                  ) : (
+                    <><RefreshCw className="w-3.5 h-3.5 mr-1" />AI 重新生成</>
+                  )}
+                </Button>
+                <Button size="sm" onClick={() => { setEditingStep(null); toast.success("已保存修改"); }}>
+                  <Check className="w-3.5 h-3.5 mr-1" />保存
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Email Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
