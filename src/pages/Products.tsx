@@ -8,7 +8,7 @@ import {
   Package, Search, Plus, Globe,
   BarChart3, Eye, Layers, CheckCircle2, Tag,
   MessageSquare, Bot, Factory, Star, Filter,
-  Share2, Trash2, ExternalLink, Copy, Users, Loader2,
+  Share2, Trash2, ExternalLink, Copy, Users, Loader2, Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import ProductDetail from "@/components/products/ProductDetail";
+import ProductFormDialog from "@/components/products/ProductFormDialog";
 import ApiKeyBanner from "@/components/ApiKeyBanner";
 import { useProducts } from "@/hooks/use-products";
 import type { Product } from "@/hooks/use-products";
@@ -42,6 +43,11 @@ export default function Products() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [shareNote, setShareNote] = useState("");
+  const [productFormOpen, setProductFormOpen] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+
+  const openCreate = () => { setEditingProductId(null); setProductFormOpen(true); };
+  const openEdit = (id: string) => { setEditingProductId(id); setProductFormOpen(true); };
 
   // 默认把前 3 个产品作为"我的产品"示例
   const myProducts = useMemo(
@@ -174,7 +180,7 @@ export default function Products() {
           <p className="text-xs text-muted-foreground">工厂直连 · AI机器人赋能选品</p>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" className="text-xs" onClick={() => toast("添加产品功能即将上线")}>
+          <Button size="sm" className="text-xs" onClick={openCreate}>
             <Plus className="w-3.5 h-3.5 mr-1" /> 添加产品
           </Button>
         </div>
