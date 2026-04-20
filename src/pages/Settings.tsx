@@ -363,7 +363,7 @@ function IntegrationsSection() {
     { group: "邮箱集成", icon: Mail, items: [{ name: "Gmail", connected: true }, { name: "Outlook", connected: false }] },
     { group: "即时通讯", icon: MessageSquare, items: [{ name: "企业微信", connected: true }, { name: "钉钉", connected: false }, { name: "Slack", connected: false }] },
     { group: "数据源", icon: Database, items: [{ name: "CRM系统", connected: false }, { name: "ERP系统", connected: false }, { name: "电商平台", connected: false }] },
-    { group: "API 密钥", icon: Key, items: [{ name: "OpenAI", connected: true }, { name: "Anthropic", connected: true }] },
+    { group: "API 密钥", icon: Key, items: [{ name: "Google AI", connected: !!localStorage.getItem("banrenma_google_api_key") }] },
   ];
 
   return (
