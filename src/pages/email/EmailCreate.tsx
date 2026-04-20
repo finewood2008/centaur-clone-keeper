@@ -519,9 +519,33 @@ ${ctx}`;
             <div className="space-y-2">
               <Label className="text-xs">主题行</Label>
               <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
-              <div className="flex items-center gap-2 text-[10px]">
+              <div className="flex items-center gap-2 text-[10px] flex-wrap">
                 <span className="text-muted-foreground">AI预测打开率:</span>
-                <Badge variant="outline" className="text-brand-green border-brand-green/30 text-[10px] h-4">38% 🟢 高于行业平均21%</Badge>
+                {predicting ? (
+                  <Badge variant="outline" className="text-muted-foreground text-[10px] h-4 gap-1">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" /> AI 评估中...
+                  </Badge>
+                ) : openRate ? (
+                  <>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] h-4",
+                        openRate.rate >= 30
+                          ? "text-brand-green border-brand-green/30"
+                          : openRate.rate >= 21
+                            ? "text-primary border-primary/30"
+                            : "text-destructive border-destructive/30"
+                      )}
+                    >
+                      {openRate.rate}% {openRate.rate >= 30 ? "🟢" : openRate.rate >= 21 ? "🟡" : "🔴"}{" "}
+                      {openRate.rate >= 21 ? "高于" : "低于"}行业平均21%
+                    </Badge>
+                    {openRate.reason && <span className="text-muted-foreground">· {openRate.reason}</span>}
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">{hasKey ? "修改主题行后自动评估" : "配置 API Key 后自动评估"}</span>
+                )}
               </div>
             </div>
             <div className="space-y-2">
@@ -631,23 +655,58 @@ ${ctx}`;
 
           {sequenceEnabled && (
             <div className="space-y-2">
-              {sequenceSteps.map((s) => (
-                <div key={s.step} className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/30">
-                  <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                    s.step === 1 ? "bg-brand-green/15 text-brand-green" : "bg-secondary text-muted-foreground"
-                  )}>{s.step}</div>
-                  <div className="flex-1">
-                    <div className="text-xs font-medium">{s.name}</div>
-                    <div className="text-[10px] text-muted-foreground">{s.delay} · {s.condition}</div>
-                  </div>
-                  {s.step > 1 && (
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => toast("AI生成功能即将上线")}>AI生成</Button>
-                      <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => toast("手动编辑功能即将上线")}>编辑</Button>
+              {sequenceSteps.map((s) => {
+                const draft = sequenceDrafts[s.step];
+                const isLoading = generatingStep === s.step;
+                return (
+                  <div key={s.step} className="rounded-lg bg-secondary/30 overflow-hidden">
+                    <div className="flex items-center gap-3 p-2.5">
+                      <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                        s.step === 1 || draft ? "bg-brand-green/15 text-brand-green" : "bg-secondary text-muted-foreground"
+                      )}>{s.step === 1 || draft ? <Check className="w-3.5 h-3.5" /> : s.step}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium flex items-center gap-1.5 flex-wrap">
+                          {s.name}
+                          {draft && <Badge variant="outline" className="text-[9px] h-4 text-brand-green border-brand-green/30">已生成</Badge>}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          {s.delay} · {draft ? draft.subject : s.condition}
+                        </div>
+                      </div>
+                      {s.step > 1 && (
+                        <div className="flex gap-1 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-[10px] px-2"
+                            disabled={isLoading}
+                            onClick={() => handleSequenceGenerate(s)}
+                          >
+                            {isLoading ? (
+                              <><Loader2 className="w-3 h-3 mr-1 animate-spin" />生成中</>
+                            ) : (
+                              <><Sparkles className="w-3 h-3 mr-1" />{draft ? "重新生成" : "AI生成"}</>
+                            )}
+                          </Button>
+                          {draft && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 text-[10px] px-2"
+                              onClick={() => setEditingStep(s.step)}
+                            >
+                              <Pencil className="w-3 h-3 mr-1" />编辑
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                      {s.step === 1 && (
+                        <Badge variant="outline" className="text-[9px] h-4 shrink-0">使用 Step 2 邮件</Badge>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
 
