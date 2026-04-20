@@ -555,15 +555,32 @@ export default function Customers() {
                     <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-bold", tierColors[isEditing ? editForm.tier : selectedCustomer.tier])}>{isEditing ? editForm.tier : selectedCustomer.tier}级</span>
                     <Badge variant="outline" className="text-[10px] h-4">AI {selectedCustomer.aiScore}</Badge>
                     {!isEditing ? (
-                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={startEditing}>
-                        <Pencil className="w-3 h-3" />
-                      </Button>
+                      <>
+                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={startEditing}>
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                          onClick={handleDeleteCustomer}
+                          title="删除客户"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </>
                     ) : (
                       <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-brand-green" onClick={saveEditing}>
-                          <Save className="w-3 h-3" />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-brand-green"
+                          onClick={saveEditing}
+                          disabled={isSaving}
+                        >
+                          {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                         </Button>
-                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setIsEditing(false)}>
+                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setIsEditing(false)} disabled={isSaving}>
                           <X className="w-3 h-3" />
                         </Button>
                       </div>
