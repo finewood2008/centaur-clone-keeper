@@ -2,7 +2,7 @@
  * EmailCreate - 创建邮件活动（4步流程）
  */
 import { useState, useEffect, useRef } from "react";
-import { Sparkles, ArrowRight, ArrowLeft, Eye, Send, RefreshCw, Check, Monitor, Smartphone, ShieldCheck, AlertTriangle, CheckCircle2, XCircle, Loader2, Wand2 } from "lucide-react";
+import { Sparkles, ArrowRight, ArrowLeft, Eye, Send, RefreshCw, Check, Monitor, Smartphone, ShieldCheck, AlertTriangle, CheckCircle2, XCircle, Loader2, Wand2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
