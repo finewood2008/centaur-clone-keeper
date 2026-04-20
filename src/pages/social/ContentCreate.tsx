@@ -11,7 +11,6 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ApiKeyBanner from "@/components/ApiKeyBanner";
 
 const sampleImages = [
   { id: "1", src: "https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?w=300&h=300&fit=crop", name: "LED灯A" },
@@ -76,7 +75,6 @@ export default function ContentCreate() {
 
   return (
     <div className="space-y-4">
-      <ApiKeyBanner description="后，AI 文案生成、多平台改写等功能将自动激活" />
       {/* Stepper */}
       <div className="flex items-center gap-2">
         {stepTitles.map((title, i) => (

@@ -4,6 +4,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { Users, FolderOpen, PenTool, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ApiKeyBanner from "@/components/ApiKeyBanner";
 
 const subNav = [
   { label: "账号管理", href: "/social/accounts", icon: Users },
@@ -15,6 +16,7 @@ const subNav = [
 export default function SocialLayout() {
   return (
     <div className="space-y-4">
+      <ApiKeyBanner description="后，AI 文案生成、多平台改写等功能将自动激活" />
       <div>
         <h2 className="font-display font-semibold text-lg">社媒中心</h2>
         <p className="text-xs text-muted-foreground">AI辅助创作 · 多平台自动发布</p>
