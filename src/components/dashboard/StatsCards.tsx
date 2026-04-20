@@ -11,11 +11,15 @@ interface StatsData {
   automationRate: number;
   avgResponseTime: number;
   satisfaction: number;
+  totalCustomers?: number;
+  monthlyInquiries?: number;
+  conversionRate?: number;
 }
 
 interface StatsCardsProps {
   stats: StatsData;
   onCardClick?: (card: "inquiries" | "automation" | "response" | "satisfaction") => void;
+  loading?: boolean;
 }
 
 const fadeUp = {
