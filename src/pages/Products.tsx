@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import ProductDetail from "@/components/products/ProductDetail";
+import ApiKeyBanner from "@/components/ApiKeyBanner";
 
 interface Product {
   id: number; name: string; category: string; sku: string;
@@ -205,6 +206,7 @@ export default function Products() {
 
   return (
     <div className="space-y-4">
+      <ApiKeyBanner description="后，产品 AI 机器人将自动激活，可生成多语言描述与智能问答" />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h2 className="font-display font-semibold text-lg">产品库</h2>
