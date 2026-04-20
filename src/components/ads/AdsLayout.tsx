@@ -4,6 +4,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { Users, BarChart3, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ApiKeyBanner from "@/components/ApiKeyBanner";
 
 const subNav = [
   { label: "账户管理", href: "/ads/accounts", icon: Users },
@@ -14,6 +15,7 @@ const subNav = [
 export default function AdsLayout() {
   return (
     <div className="space-y-4">
+      <ApiKeyBanner description="后，AI 广告优化建议与自动审核将自动激活" />
       <div>
         <h2 className="font-display font-semibold text-lg">广告投放</h2>
         <p className="text-xs text-muted-foreground">AI自动优化 · 人工审核协作</p>

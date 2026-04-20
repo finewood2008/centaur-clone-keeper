@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import ApiKeyBanner from "@/components/ApiKeyBanner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const emailTypes = [
@@ -206,8 +205,7 @@ Best regards,
   );
 
   return (
-    <div className="max-w-2xl space-y-4">
-      <ApiKeyBanner description="后，AI 邮件文案生成与智能优化将自动激活" />
+    <div className="max-w-2xl">
       {stepIndicator}
 
       {step === 1 && (

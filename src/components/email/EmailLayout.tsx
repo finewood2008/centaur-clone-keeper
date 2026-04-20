@@ -4,6 +4,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { Users, PenLine, FolderOpen, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ApiKeyBanner from "@/components/ApiKeyBanner";
 
 const subNav = [
   { label: "客户列表", href: "/email/lists", icon: Users },
@@ -15,6 +16,7 @@ const subNav = [
 export default function EmailLayout() {
   return (
     <div className="space-y-4">
+      <ApiKeyBanner description="后，AI 开发信生成与自动化跟进序列将自动激活" />
       <div>
         <h2 className="font-display font-semibold text-lg">AI邮件营销</h2>
         <p className="text-xs text-muted-foreground">智能开发信 · 自动化序列 · 效果追踪</p>
