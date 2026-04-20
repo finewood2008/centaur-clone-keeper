@@ -12,7 +12,16 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApiKey } from "@/hooks/use-api-key";
-import { callGemini, toGeminiMessages, GeminiError } from "@/lib/gemini";
+import { streamGemini, toGeminiMessages, GeminiError } from "@/lib/gemini";
+
+type Platform = "linkedin" | "facebook" | "instagram";
+const PLATFORM_ORDER: Platform[] = ["linkedin", "facebook", "instagram"];
+
+const PLATFORM_BRIEF: Record<Platform, string> = {
+  linkedin: "专业、行业洞察口吻；可分点列出价值主张；CTA 偏 B2B（如 \"DM for catalog\"）；3-5 个专业 hashtag；约 180-260 字。",
+  facebook: "亲和、社区化口吻；可讲故事或客户场景；CTA 偏沟通（如 \"Send us a message\"）；2-4 个 hashtag；约 120-180 字。",
+  instagram: "视觉化、emoji 丰富、短句换行；首句抓眼球；CTA 引导主页/链接；6-10 个高曝光 hashtag；约 80-140 字。",
+};
 
 const sampleImages = [
   { id: "1", src: "https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?w=300&h=300&fit=crop", name: "LED灯A" },
