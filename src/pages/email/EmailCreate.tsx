@@ -327,7 +327,7 @@ Return ONLY JSON: {"rate": <number 5-75>, "reason": "<one short Chinese sentence
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subject, hasKey, apiKey, model, step]);
 
-
+  const handleSend = async () => {
     toast.loading("正在发送邮件...");
     await new Promise((r) => setTimeout(r, 3000));
     toast.dismiss();
