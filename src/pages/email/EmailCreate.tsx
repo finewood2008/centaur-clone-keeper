@@ -284,7 +284,50 @@ Extra context from sender: ${extraInfo || "(none)"}`;
     }
   };
 
-  const handleSend = async () => {
+  // ---------- AI 预测打开率（主题行变化防抖触发） ----------
+  const [openRate, setOpenRate] = useState<{ rate: number; reason: string } | null>(null);
+  const [predicting, setPredicting] = useState(false);
+  const predictTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const predictAbort = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!hasKey || !subject.trim() || step !== 3) {
+      setOpenRate(null);
+      return;
+    }
+    if (predictTimer.current) clearTimeout(predictTimer.current);
+    predictTimer.current = setTimeout(async () => {
+      predictAbort.current?.abort();
+      const ctrl = new AbortController();
+      predictAbort.current = ctrl;
+      setPredicting(true);
+      try {
+        const systemInstruction = `You are an email open-rate prediction model trained on B2B cold-email benchmarks (industry avg ~21%). Given a subject line, predict expected open rate as a percentage and one short Chinese reason.
+Return ONLY JSON: {"rate": <number 5-75>, "reason": "<one short Chinese sentence>"}`;
+        const raw = await callGemini(
+          apiKey,
+          toGeminiMessages([{ role: "user", content: `SUBJECT: ${subject}` }]),
+          { model, systemInstruction, temperature: 0.3, maxOutputTokens: 256 }
+        );
+        if (ctrl.signal.aborted) return;
+        const parsed = parseJsonFromAI<{ rate: number; reason: string }>(raw);
+        setOpenRate({
+          rate: Math.max(0, Math.min(100, Math.round(parsed.rate))),
+          reason: parsed.reason || "",
+        });
+      } catch {
+        if (!ctrl.signal.aborted) setOpenRate(null);
+      } finally {
+        if (!ctrl.signal.aborted) setPredicting(false);
+      }
+    }, 800);
+    return () => {
+      if (predictTimer.current) clearTimeout(predictTimer.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subject, hasKey, apiKey, model, step]);
+
+
     toast.loading("正在发送邮件...");
     await new Promise((r) => setTimeout(r, 3000));
     toast.dismiss();
