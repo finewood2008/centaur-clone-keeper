@@ -3,8 +3,9 @@
  * Premium Dark Glassmorphism redesign
  */
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import StatsCards from "@/components/dashboard/StatsCards";
 import SourceChart from "@/components/dashboard/SourceChart";
@@ -82,8 +83,30 @@ export default function Dashboard() {
     }
   }, [navigate]);
 
+  const hasApiKey = typeof window !== "undefined" && !!localStorage.getItem("banrenma_google_api_key");
+
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-5">
+      {!hasApiKey && (
+        <motion.div variants={fadeUp}>
+          <Link
+            to="/settings"
+            className="block px-4 py-3 rounded-lg bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-xs">
+                <span className="font-medium">💡 配置 Google AI API Key</span>
+                <span className="text-muted-foreground ml-1">
+                  后，AI 助手、智能回复、产品机器人等功能将自动激活
+                </span>
+                <span className="text-primary ml-1">→ 前往设置</span>
+              </span>
+            </div>
+          </Link>
+        </motion.div>
+      )}
+
       {/* Hero Banner with grid background */}
       <motion.div variants={fadeUp} className="relative rounded-2xl overflow-hidden glass-panel p-6 hero-grid-bg">
         <div className="relative z-10">
