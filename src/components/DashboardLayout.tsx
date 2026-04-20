@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import AgentStatusPanel from "./AgentStatusPanel";
 import PointsStatusBar from "./PointsStatusBar";
+import UserMenu from "./UserMenu";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import logoImg from "@/assets/logo.png";
 
@@ -97,6 +98,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Bell className="w-4 h-4" />
               <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-orange glow-orange" />
             </button>
+            <UserMenu compact />
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <button className="w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground">
@@ -299,6 +301,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link to="/settings" className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/[0.04] transition-all">
               <Settings className="w-4 h-4" />
             </Link>
+            <UserMenu />
           </div>
         </header>
 

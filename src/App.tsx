@@ -4,8 +4,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardLayout from "./components/DashboardLayout";
 import AIAssistant from "./components/AIAssistant";
+import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Inbox from "./pages/Inbox";
 import SocialLayout from "./components/social/SocialLayout";
@@ -43,44 +45,54 @@ const App = () => (
       <Sonner />
       <ErrorBoundary>
         <BrowserRouter>
-          <DashboardLayout>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/inbox" element={<Inbox />} />
-              <Route path="/social" element={<SocialLayout />}>
-                <Route index element={<Navigate to="accounts" replace />} />
-                <Route path="accounts" element={<SocialAccounts />} />
-                <Route path="assets" element={<AssetLibrary />} />
-                <Route path="create" element={<ContentCreate />} />
-                <Route path="calendar" element={<ContentCalendar />} />
-              </Route>
-              <Route path="/ads" element={<AdsLayout />}>
-                <Route index element={<Navigate to="accounts" replace />} />
-                <Route path="accounts" element={<AdsAccounts />} />
-                <Route path="dashboard" element={<AdsDashboard />} />
-                <Route path="approvals" element={<AdsApprovals />} />
-              </Route>
-              <Route path="/email" element={<EmailLayout />}>
-                <Route index element={<Navigate to="lists" replace />} />
-                <Route path="lists" element={<EmailLists />} />
-                <Route path="create" element={<EmailCreate />} />
-                <Route path="campaigns" element={<EmailCampaigns />} />
-                <Route path="analytics" element={<EmailAnalytics />} />
-              </Route>
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/data" element={<DataCenter />} />
-              <Route path="/data/backup" element={<DataBackup />} />
-              <Route path="/data/export" element={<DataExport />} />
-              <Route path="/billing" element={<BillingCenter />} />
-              <Route path="/billing/settings" element={<BillingSettings />} />
-              <Route path="/billing/invoice" element={<BillingInvoice />} />
-              <Route path="/billing/plans" element={<BillingPlans />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </DashboardLayout>
-          <AIAssistant />
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/inbox" element={<Inbox />} />
+                      <Route path="/social" element={<SocialLayout />}>
+                        <Route index element={<Navigate to="accounts" replace />} />
+                        <Route path="accounts" element={<SocialAccounts />} />
+                        <Route path="assets" element={<AssetLibrary />} />
+                        <Route path="create" element={<ContentCreate />} />
+                        <Route path="calendar" element={<ContentCalendar />} />
+                      </Route>
+                      <Route path="/ads" element={<AdsLayout />}>
+                        <Route index element={<Navigate to="accounts" replace />} />
+                        <Route path="accounts" element={<AdsAccounts />} />
+                        <Route path="dashboard" element={<AdsDashboard />} />
+                        <Route path="approvals" element={<AdsApprovals />} />
+                      </Route>
+                      <Route path="/email" element={<EmailLayout />}>
+                        <Route index element={<Navigate to="lists" replace />} />
+                        <Route path="lists" element={<EmailLists />} />
+                        <Route path="create" element={<EmailCreate />} />
+                        <Route path="campaigns" element={<EmailCampaigns />} />
+                        <Route path="analytics" element={<EmailAnalytics />} />
+                      </Route>
+                      <Route path="/customers" element={<Customers />} />
+                      <Route path="/products" element={<Products />} />
+                      <Route path="/data" element={<DataCenter />} />
+                      <Route path="/data/backup" element={<DataBackup />} />
+                      <Route path="/data/export" element={<DataExport />} />
+                      <Route path="/billing" element={<BillingCenter />} />
+                      <Route path="/billing/settings" element={<BillingSettings />} />
+                      <Route path="/billing/invoice" element={<BillingInvoice />} />
+                      <Route path="/billing/plans" element={<BillingPlans />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </DashboardLayout>
+                  <AIAssistant />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
         </BrowserRouter>
       </ErrorBoundary>
     </TooltipProvider>
