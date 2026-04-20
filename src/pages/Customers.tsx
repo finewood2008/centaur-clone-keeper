@@ -341,7 +341,21 @@ export default function Customers() {
     });
   };
 
-  const custId = selectedCustomer ? `CUST-20240315-${String(selectedCustomer.id).padStart(3, "0")}` : "";
+  const custId = selectedCustomer ? `CUST-${selectedCustomer.id.slice(0, 8).toUpperCase()}` : "";
+
+  // 真实统计
+  const stats = useMemo(() => {
+    const total = customerList.length;
+    const tierA = customerList.filter((c) => c.tier === "A").length;
+    const totalValueNum = dbCustomers.reduce((s, c) => s + Number(c.total_value ?? 0), 0);
+    const avgScore = total > 0
+      ? Math.round(customerList.reduce((s, c) => s + (c.aiScore || 0), 0) / total)
+      : 0;
+    const fmtTotal = totalValueNum >= 1_000_000
+      ? `$${(totalValueNum / 1_000_000).toFixed(1)}M`
+      : `$${(totalValueNum / 1000).toFixed(1)}K`;
+    return { total, tierA, totalValue: fmtTotal, avgScore };
+  }, [customerList, dbCustomers]);
 
   return (
     <>
@@ -387,10 +401,10 @@ export default function Customers() {
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "总客户数", value: "156", sub: "↑ 12 本周新增" },
-          { label: "A级客户", value: "23", sub: "高价值客户" },
-          { label: "客户总价值", value: "$1.2M", sub: "↑ 15% vs 上月" },
-          { label: "平均AI评分", value: "67", sub: "/ 100" },
+          { label: "总客户数", value: String(stats.total), sub: `${stats.tierA} 位 A 级` },
+          { label: "A级客户", value: String(stats.tierA), sub: "高价值客户" },
+          { label: "客户总价值", value: stats.totalValue, sub: "累计成交" },
+          { label: "平均AI评分", value: String(stats.avgScore), sub: "/ 100" },
         ].map((s) => (
           <div key={s.label} className="glass-panel metric-card rounded-xl p-4">
             <div className="text-xs text-muted-foreground mb-1">{s.label}</div>
