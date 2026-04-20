@@ -4,6 +4,7 @@
  */
 import { Key } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useHasApiKey } from "@/hooks/use-api-key";
 
 interface ApiKeyGuardProps {
   children: React.ReactNode;
@@ -11,7 +12,7 @@ interface ApiKeyGuardProps {
 }
 
 export default function ApiKeyGuard({ children, fallbackMessage }: ApiKeyGuardProps) {
-  const hasKey = !!localStorage.getItem("banrenma_google_api_key");
+  const hasKey = useHasApiKey();
 
   if (!hasKey) {
     return (
