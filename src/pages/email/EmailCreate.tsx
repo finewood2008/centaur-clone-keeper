@@ -231,6 +231,82 @@ Extra context from sender: ${extraInfo || "(none)"}`;
     toast.success("邮件发送成功！已向450位客户发送");
   };
 
+  const handleSequenceGenerate = async (stepInfo: typeof sequenceSteps[number]) => {
+    if (!hasKey) {
+      toast.error("请先配置 Google AI API Key");
+      return;
+    }
+    if (!subject || !body) {
+      toast.error("请先在 Step 2 生成首封邮件，AI 才能基于上下文撰写跟进");
+      return;
+    }
+    setGeneratingStep(stepInfo.step);
+    try {
+      // 已生成的前置邮件作为上下文
+      const previousEmails = [
+        { step: 1, name: "首次开发信", subject, body },
+        ...Object.entries(sequenceDrafts)
+          .filter(([k]) => Number(k) < stepInfo.step)
+          .sort(([a], [b]) => Number(a) - Number(b))
+          .map(([k, v]) => {
+            const meta = sequenceSteps.find((s) => s.step === Number(k))!;
+            return { step: Number(k), name: meta.name, subject: v.subject, body: v.body };
+          }),
+      ];
+
+      const systemInstruction = `You are a senior B2B foreign-trade follow-up copywriter for OPC LED Technology Co., Ltd. Write step-${stepInfo.step} of an automated cold-email sequence.
+
+Rules:
+- Continue naturally from the prior emails — DO NOT repeat the same opener or pitch.
+- Match the named purpose of this step.
+- Keep personalization variables intact: {{firstName}}, {{companyName}}, {{industry}}, {{senderName}}.
+- Avoid spam triggers (no "free", no "save X%", no all-caps).
+- End with a soft, varied CTA (e.g. ask a question, offer a sample, share a case study).
+- Subject should be different from previous steps. <= 65 chars, no all-caps words.
+- Plain-text English body, 80-160 words.
+
+Return ONLY JSON, no markdown fences:
+{"subject": "...", "body": "..."}`;
+
+      const ctx = previousEmails
+        .map(
+          (e) =>
+            `--- Step ${e.step} (${e.name}) ---\nSUBJECT: ${e.subject}\nBODY:\n${e.body}`
+        )
+        .join("\n\n");
+
+      const prompt = `Sequence step to write now:
+- Step number: ${stepInfo.step}
+- Name/purpose: ${stepInfo.name}
+- Send timing: ${stepInfo.delay}
+- Trigger condition: ${stepInfo.condition}
+
+Previous emails in this sequence:
+${ctx}`;
+
+      const raw = await callGemini(
+        apiKey,
+        toGeminiMessages([{ role: "user", content: prompt }]),
+        { model, systemInstruction, temperature: 0.85, maxOutputTokens: 1500 }
+      );
+
+      const parsed = parseJsonFromAI<{ subject: string; body: string }>(raw);
+      if (!parsed.subject || !parsed.body) throw new Error("AI 返回缺少字段");
+
+      setSequenceDrafts((prev) => ({
+        ...prev,
+        [stepInfo.step]: { subject: parsed.subject.trim(), body: parsed.body.trim() },
+      }));
+      setEditingStep(stepInfo.step);
+      toast.success(`第 ${stepInfo.step} 封跟进邮件已生成`);
+    } catch (e) {
+      const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "生成失败";
+      toast.error("AI 生成跟进失败", { description: msg });
+    } finally {
+      setGeneratingStep(null);
+    }
+  };
+
   const stepIndicator = (
     <div className="flex items-center gap-2 mb-6">
       {[1, 2, 3, 4].map((s) => (
