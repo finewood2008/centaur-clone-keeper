@@ -23,6 +23,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import ApiKeyBanner from "@/components/ApiKeyBanner";
+import NewCustomerDialog from "@/components/customers/NewCustomerDialog";
 import {
   useCustomers,
   useCreateCustomer,
@@ -171,6 +172,7 @@ export default function Customers() {
   const [importPreview, setImportPreview] = useState<Array<Omit<CustomerVM, "id">>>([]);
   const [importFileName, setImportFileName] = useState("");
   const [isImporting, setIsImporting] = useState(false);
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = customerList.filter((c) => {
@@ -368,6 +370,9 @@ export default function Customers() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <input type="file" ref={fileInputRef} accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileSelect} />
+          <Button size="sm" onClick={() => setShowNewCustomer(true)}>
+            <Plus className="w-3.5 h-3.5 mr-1" /> <span className="hidden sm:inline">新建</span>客户
+          </Button>
           <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
             <Upload className="w-3.5 h-3.5 mr-1" /> <span className="hidden sm:inline">批量</span>导入
           </Button>
