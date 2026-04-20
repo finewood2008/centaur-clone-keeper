@@ -86,76 +86,186 @@ export default function EmailCreate() {
     suggestions: string[];
   } | null>(null);
 
+  // Helper: clean fenced JSON from Gemini and parse
+  const parseJsonFromAI = <T,>(raw: string): T => {
+    const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start === -1 || end === -1) throw new Error("AI 未返回 JSON 格式");
+    return JSON.parse(cleaned.slice(start, end + 1)) as T;
+  };
+
   const handleSpamCheck = async () => {
+    if (!hasKey) {
+      toast.error("请先配置 Google AI API Key", { description: "前往设置页配置后即可使用 AI 检测" });
+      return;
+    }
+    if (!subject.trim() || !body.trim()) {
+      toast.error("请先填写邮件主题与正文");
+      return;
+    }
     setSpamChecking(true);
-    await new Promise((r) => setTimeout(r, 1800));
-    setSpamResult({
-      score: 2.1,
-      checks: [
-        { name: "SPF记录", status: "pass", detail: "opcled.com 已配置SPF记录，授权发送服务器" },
-        { name: "DKIM签名", status: "pass", detail: "DKIM签名有效，密钥长度2048位" },
-        { name: "DMARC策略", status: "pass", detail: "DMARC策略设置为quarantine，对齐SPF/DKIM" },
-        { name: "发件人信誉", status: "pass", detail: "域名信誉良好，近30天退信率<1%" },
-        { name: "内容检测", status: "warn", detail: "检测到可能触发垃圾邮件过滤的短语" },
-        { name: "链接安全", status: "pass", detail: "所有链接均使用HTTPS，无黑名单域名" },
-        { name: "HTML/文本比例", status: "pass", detail: "纯文本邮件，比例良好" },
-        { name: "退订链接", status: "pass", detail: "包含退订链接，符合CAN-SPAM要求" },
-        { name: "主题行检测", status: "warn", detail: "主题行包含大写字母，部分邮箱可能标记" },
-      ],
-      suggestions: [
-        "避免在正文中使用\"save\"、\"discount\"等促销敏感词，改用更自然的表述",
-        "主题行建议避免全大写单词，改为首字母大写以降低垃圾邮件评分",
-        "建议添加发件人物理地址以完全符合CAN-SPAM法规",
-        "考虑使用个性化变量替代通用问候语，提升送达率",
-      ],
-    });
-    setSpamChecked(true);
-    setSpamChecking(false);
-    toast.success("垃圾邮件检测完成");
+    try {
+      const systemInstruction = `You are an expert email deliverability auditor. Evaluate a B2B cold email and return ONLY a JSON object — no prose, no markdown fences.
+
+Schema:
+{
+  "score": <number 0-10, lower=better, e.g. 0.8 means very clean, 7+ means likely spam>,
+  "checks": [
+    { "name": "<short Chinese label>", "status": "pass"|"warn"|"fail", "detail": "<one Chinese sentence>" }
+  ],
+  "suggestions": ["<actionable Chinese suggestion>", ...]
+}
+
+Always include these 9 checks (in order, in Chinese): SPF记录, DKIM签名, DMARC策略, 发件人信誉, 内容检测, 链接安全, HTML/文本比例, 退订链接, 主题行检测.
+Assume sender domain opcled.com has SPF/DKIM/DMARC properly configured (these should be "pass" with positive details).
+Focus your scoring mainly on 内容检测 + 主题行检测 based on the actual subject/body provided. Detect spam-trigger words ("free", "save", "guarantee", "%off", all-caps, excessive punctuation), missing physical address, weak unsubscribe.
+Provide 0 suggestions if score <= 1.0; otherwise 2-5 concrete Chinese suggestions.`;
+
+      const prompt = `Evaluate this email:
+SUBJECT: ${subject}
+BODY:
+${body}`;
+
+      const raw = await callGemini(
+        apiKey,
+        toGeminiMessages([{ role: "user", content: prompt }]),
+        { model, systemInstruction, temperature: 0.2, maxOutputTokens: 2048 }
+      );
+
+      const parsed = parseJsonFromAI<{
+        score: number;
+        checks: { name: string; status: "pass" | "warn" | "fail"; detail: string }[];
+        suggestions: string[];
+      }>(raw);
+
+      // Validate
+      if (typeof parsed.score !== "number" || !Array.isArray(parsed.checks)) {
+        throw new Error("AI 返回结构异常");
+      }
+
+      setSpamResult({
+        score: Math.max(0, Math.min(10, Number(parsed.score.toFixed(1)))),
+        checks: parsed.checks,
+        suggestions: parsed.suggestions || [],
+      });
+      setSpamChecked(true);
+      toast.success(`AI 垃圾邮件检测完成（评分 ${parsed.score.toFixed(1)}/10）`);
+    } catch (e) {
+      const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "检测失败";
+      toast.error("AI 检测失败", { description: msg });
+    } finally {
+      setSpamChecking(false);
+    }
   };
 
   const [isFixing, setIsFixing] = useState(false);
 
   const handleAutoFix = async () => {
+    if (!hasKey || !spamResult) return;
     setIsFixing(true);
-    toast.loading("AI正在优化邮件内容...");
-    await new Promise((r) => setTimeout(r, 2000));
-    toast.dismiss();
+    const previousScore = spamResult.score;
+    try {
+      const systemInstruction = `You are an expert email deliverability optimizer. Rewrite a B2B cold email so it passes spam filters and keeps the same intent and personalization variables ({{firstName}}, {{companyName}}, {{industry}}, {{senderName}}).
 
-    // Fix subject: convert full-uppercase words to title case
-    setSubject("5 Year Warranty Led Bulbs - Factory Direct Pricing");
+Return ONLY a JSON object — no prose, no markdown fences:
+{
+  "subject": "<optimized subject, no all-caps words, no spam triggers, <= 65 chars>",
+  "body": "<optimized plain-text body in English, keeping all personalization variables, ending with sender signature including company name 'OPC LED Technology Co., Ltd.' and physical address '1088 Nanshan Blvd, Shenzhen, China 518000', and a soft unsubscribe line>",
+  "newScore": <number 0-10, predicted score after fixes, lower=better>,
+  "fixedCount": <integer, number of original suggestions actually addressed>
+}
 
-    // Fix body: replace promotional trigger words and add address
-    setBody((prev) =>
-      prev
-        .replace(/save 30-40%/gi, "reduce costs by 30-40%")
-        .replace(/Hi \{\{firstName\}\}/g, "Hello {{firstName}}")
-        .replace(
-          /Best regards,\n\{\{senderName\}\}/g,
-          "Best regards,\n{{senderName}}\nOPC LED Technology Co., Ltd.\n1088 Nanshan Blvd, Shenzhen, China 518000"
-        )
-    );
+Avoid trigger words: "free", "save X%", "discount", "guarantee", "limited time", excessive "!!" or all-caps. Use natural alternatives.`;
 
-    // Update spam result to reflect fixes
-    setSpamResult({
-      score: 0.8,
-      checks: [
-        { name: "SPF记录", status: "pass", detail: "opcled.com 已配置SPF记录，授权发送服务器" },
-        { name: "DKIM签名", status: "pass", detail: "DKIM签名有效，密钥长度2048位" },
-        { name: "DMARC策略", status: "pass", detail: "DMARC策略设置为quarantine，对齐SPF/DKIM" },
-        { name: "发件人信誉", status: "pass", detail: "域名信誉良好，近30天退信率<1%" },
-        { name: "内容检测", status: "pass", detail: "未检测到垃圾邮件触发词 ✓ 已优化" },
-        { name: "链接安全", status: "pass", detail: "所有链接均使用HTTPS，无黑名单域名" },
-        { name: "HTML/文本比例", status: "pass", detail: "纯文本邮件，比例良好" },
-        { name: "退订链接", status: "pass", detail: "包含退订链接，符合CAN-SPAM要求" },
-        { name: "主题行检测", status: "pass", detail: "主题行格式规范 ✓ 已优化" },
-      ],
-      suggestions: [],
-    });
+      const prompt = `Original email:
+SUBJECT: ${subject}
+BODY:
+${body}
 
-    setIsFixing(false);
-    toast.success("已自动修复4项问题，垃圾邮件评分从 2.1 降至 0.8");
+Issues to fix (in Chinese):
+${spamResult.suggestions.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
+
+      const raw = await callGemini(
+        apiKey,
+        toGeminiMessages([{ role: "user", content: prompt }]),
+        { model, systemInstruction, temperature: 0.4, maxOutputTokens: 2048 }
+      );
+
+      const parsed = parseJsonFromAI<{
+        subject: string;
+        body: string;
+        newScore: number;
+        fixedCount: number;
+      }>(raw);
+
+      if (!parsed.subject || !parsed.body) throw new Error("AI 返回缺少字段");
+
+      setSubject(parsed.subject);
+      setBody(parsed.body);
+
+      const newScore = Math.max(0, Math.min(10, Number(parsed.newScore.toFixed(1))));
+      setSpamResult({
+        score: newScore,
+        checks: spamResult.checks.map((c) =>
+          c.status === "pass"
+            ? c
+            : { ...c, status: "pass" as const, detail: `${c.detail.split(" ✓")[0]} ✓ 已优化` }
+        ),
+        suggestions: [],
+      });
+
+      toast.success(
+        `已自动修复 ${parsed.fixedCount || spamResult.suggestions.length} 项问题，评分从 ${previousScore} 降至 ${newScore}`
+      );
+    } catch (e) {
+      const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "修复失败";
+      toast.error("AI 修复失败", { description: msg });
+    } finally {
+      setIsFixing(false);
+    }
   };
+
+  // ---------- AI 预测打开率（主题行变化时防抖触发） ----------
+  const [openRate, setOpenRate] = useState<{ rate: number; reason: string } | null>(null);
+  const [predicting, setPredicting] = useState(false);
+  const predictTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const predictAbort = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!hasKey || !subject.trim() || step !== 3) {
+      setOpenRate(null);
+      return;
+    }
+    if (predictTimer.current) clearTimeout(predictTimer.current);
+    predictTimer.current = setTimeout(async () => {
+      // Cancel previous in-flight request
+      predictAbort.current?.abort();
+      const ctrl = new AbortController();
+      predictAbort.current = ctrl;
+      setPredicting(true);
+      try {
+        const systemInstruction = `You are an email open-rate prediction model trained on B2B cold-email benchmarks (industry avg ~21%). Given a subject line, predict expected open rate as a percentage and one short Chinese reason.
+Return ONLY JSON: {"rate": <number 5-75>, "reason": "<one short Chinese sentence>"}`;
+        const raw = await callGemini(
+          apiKey,
+          toGeminiMessages([{ role: "user", content: `SUBJECT: ${subject}` }]),
+          { model, systemInstruction, temperature: 0.3, maxOutputTokens: 256 }
+        );
+        if (ctrl.signal.aborted) return;
+        const parsed = parseJsonFromAI<{ rate: number; reason: string }>(raw);
+        const rate = Math.max(0, Math.min(100, Math.round(parsed.rate)));
+        setOpenRate({ rate, reason: parsed.reason || "" });
+      } catch {
+        if (!ctrl.signal.aborted) setOpenRate(null);
+      } finally {
+        if (!ctrl.signal.aborted) setPredicting(false);
+      }
+    }, 800);
+    return () => {
+      if (predictTimer.current) clearTimeout(predictTimer.current);
+    };
+  }, [subject, hasKey, apiKey, model, step]);
 
 
   const handleGenerate = async () => {
