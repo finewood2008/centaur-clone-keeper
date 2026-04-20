@@ -99,7 +99,9 @@ export default function ProductDetail({
 
       const googleApiKey = localStorage.getItem("banrenma_google_api_key");
       if (!googleApiKey) {
-        toast({ title: "需要配置 AI", description: "请前往设置 > AI Agent 配置，填入 Google AI API Key" });
+        toast.error("需要配置 AI", {
+          description: "请前往设置 > AI Agent 配置，填入 Google AI API Key",
+        });
         setIsStreaming(false);
         setMessages(allMessages);
         return;
