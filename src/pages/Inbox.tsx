@@ -21,6 +21,7 @@ import {
   useUpdateInquiry,
 } from "@/hooks/use-inquiries";
 import type { Inquiry, Message } from "@/hooks/use-inquiries";
+import { useInboxRealtime } from "@/hooks/use-inbox-realtime";
 
 type InquiryChannel = "Email" | "独立站" | "Instagram" | "Facebook" | "Twitter";
 
