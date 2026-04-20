@@ -21,6 +21,7 @@ import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import ApiKeyBanner from "@/components/ApiKeyBanner";
 
 interface Customer {
   id: number; name: string; company: string; country: string;
@@ -256,6 +257,7 @@ export default function Customers() {
   return (
     <>
     <div className="space-y-4">
+      <ApiKeyBanner description="后，AI 客户分级、360°画像与智能跟进建议将自动激活" />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h2 className="font-display font-semibold text-lg">客户管理</h2>
