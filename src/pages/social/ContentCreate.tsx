@@ -255,18 +255,36 @@ export default function ContentCreate() {
 
           {caption && (
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold">AI生成的文案（可编辑）</h3>
-              <textarea
-                value={caption}
-                onChange={(e) => {
-                  setCaption(e.target.value);
-                  setPlatformCaptions((p) => ({ ...p, linkedin: e.target.value, facebook: e.target.value, instagram: e.target.value }));
-                }}
-                className="w-full bg-secondary rounded-lg px-3 py-3 text-xs outline-none resize-none min-h-[200px] leading-relaxed"
-              />
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">AI 生成的多平台差异化文案（可分别编辑）</h3>
+                <span className="text-[10px] text-muted-foreground">3 个版本，针对各平台特性优化</span>
+              </div>
+              <Tabs defaultValue="linkedin">
+                <TabsList className="bg-secondary">
+                  <TabsTrigger value="linkedin" className="text-xs gap-1"><Linkedin className="w-3 h-3" /> LinkedIn</TabsTrigger>
+                  <TabsTrigger value="facebook" className="text-xs gap-1"><Facebook className="w-3 h-3" /> Facebook</TabsTrigger>
+                  <TabsTrigger value="instagram" className="text-xs gap-1"><Instagram className="w-3 h-3" /> Instagram</TabsTrigger>
+                </TabsList>
+                {(["linkedin", "facebook", "instagram"] as const).map((p) => (
+                  <TabsContent key={p} value={p} className="mt-3">
+                    <textarea
+                      value={platformCaptions[p] || ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setPlatformCaptions((prev) => ({ ...prev, [p]: v }));
+                        if (p === "linkedin") setCaption(v);
+                      }}
+                      className="w-full bg-secondary rounded-lg px-3 py-3 text-xs outline-none resize-none min-h-[200px] leading-relaxed"
+                    />
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      {(platformCaptions[p] || "").length} 字符
+                    </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
               <div className="flex gap-2">
-                <button onClick={generateCaption} className="text-xs text-muted-foreground border border-border px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-secondary transition-colors">
-                  <RefreshCw className="w-3 h-3" /> 重新生成
+                <button onClick={generateCaption} disabled={isGenerating} className="text-xs text-muted-foreground border border-border px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-secondary transition-colors disabled:opacity-50">
+                  <RefreshCw className={cn("w-3 h-3", isGenerating && "animate-spin")} /> 重新生成全部
                 </button>
                 <button className="text-xs text-muted-foreground border border-border px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-secondary transition-colors">
                   <Save className="w-3 h-3" /> 保存草稿
