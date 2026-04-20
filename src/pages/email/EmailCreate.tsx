@@ -76,6 +76,11 @@ export default function EmailCreate() {
   const [editingSeqStep, setEditingSeqStep] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState<SeqDraft>({ subject: "", body: "" });
 
+  // AI-recommended send time per sequence step
+  type SendTimeRec = { localTime: string; weekday: string; tz: string; reason: string };
+  const [sendTimeRecs, setSendTimeRecs] = useState<Record<number, SendTimeRec>>({});
+  const [recommendingTimeStep, setRecommendingTimeStep] = useState<number | null>(null);
+
   const renderPreviewHtml = () => {
     const filled = body
       .replace(/\{\{firstName\}\}/g, "John")
