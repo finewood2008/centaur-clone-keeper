@@ -443,9 +443,33 @@ Extra context from sender: ${extraInfo || "(none)"}`;
             <div className="space-y-2">
               <Label className="text-xs">主题行</Label>
               <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
-              <div className="flex items-center gap-2 text-[10px]">
+              <div className="flex items-center gap-2 text-[10px] flex-wrap">
                 <span className="text-muted-foreground">AI预测打开率:</span>
-                <Badge variant="outline" className="text-brand-green border-brand-green/30 text-[10px] h-4">38% 🟢 高于行业平均21%</Badge>
+                {predicting ? (
+                  <Badge variant="outline" className="text-muted-foreground text-[10px] h-4 gap-1">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" /> AI 评估中...
+                  </Badge>
+                ) : openRate ? (
+                  <>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] h-4",
+                        openRate.rate >= 30
+                          ? "text-brand-green border-brand-green/30"
+                          : openRate.rate >= 21
+                            ? "text-primary border-primary/30"
+                            : "text-destructive border-destructive/30"
+                      )}
+                    >
+                      {openRate.rate}% {openRate.rate >= 30 ? "🟢" : openRate.rate >= 21 ? "🟡" : "🔴"}{" "}
+                      {openRate.rate >= 21 ? "高于" : "低于"}行业平均21%
+                    </Badge>
+                    {openRate.reason && <span className="text-muted-foreground">· {openRate.reason}</span>}
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">{hasKey ? "修改主题行后自动评估" : "配置 API Key 后自动评估"}</span>
+                )}
               </div>
             </div>
             <div className="space-y-2">
