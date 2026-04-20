@@ -69,6 +69,13 @@ export default function EmailCreate() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
 
+  // Sequence drafts (steps 2-5): generated/edited subject + body per step
+  type SeqDraft = { subject: string; body: string };
+  const [sequenceDrafts, setSequenceDrafts] = useState<Record<number, SeqDraft>>({});
+  const [generatingSeqStep, setGeneratingSeqStep] = useState<number | null>(null);
+  const [editingSeqStep, setEditingSeqStep] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState<SeqDraft>({ subject: "", body: "" });
+
   const renderPreviewHtml = () => {
     const filled = body
       .replace(/\{\{firstName\}\}/g, "John")
@@ -327,6 +334,105 @@ Extra context from sender: ${extraInfo || "(none)"}`;
     }
   };
 
+  const handleSequenceGenerate = async (stepNum: number) => {
+    if (!hasKey) {
+      toast.error("请先配置 Google AI API Key", { description: "前往设置页配置后即可使用 AI 序列生成" });
+      return;
+    }
+    if (!subject.trim() || !body.trim()) {
+      toast.error("请先在 Step 2 生成首封邮件，AI 才能基于上下文生成跟进");
+      return;
+    }
+    const seqMeta = sequenceSteps.find((s) => s.step === stepNum);
+    if (!seqMeta) return;
+
+    setGeneratingSeqStep(stepNum);
+    try {
+      const priorEmails: { step: number; name: string; subject: string; body: string }[] = [
+        { step: 1, name: "首次开发信", subject, body },
+      ];
+      for (let i = 2; i < stepNum; i++) {
+        const d = sequenceDrafts[i];
+        if (d) {
+          const meta = sequenceSteps.find((x) => x.step === i);
+          priorEmails.push({ step: i, name: meta?.name || `Email ${i}`, subject: d.subject, body: d.body });
+        }
+      }
+
+      const audienceLabel = audiences.find((a) => a.value === audience)?.label || audience;
+      const toneLabel = toneOptions.find((t) => t.value === tone)?.label || tone;
+
+      const systemInstruction = `You are a senior B2B foreign-trade email-sequence copywriter for OPC LED Technology Co., Ltd. Generate the NEXT email in an automated drip sequence.
+
+CRITICAL OUTPUT FORMAT — return EXACTLY two sections separated by a single line "---":
+SUBJECT: <one-line subject, no quotes, must clearly differ from prior subjects>
+---
+<email body in plain text English>
+
+Rules:
+- This email is "${seqMeta.name}" (${seqMeta.delay}, trigger: ${seqMeta.condition}).
+- Reference the prior thread naturally — do NOT repeat the same opening, value props, or CTA from earlier emails.
+- Match this step's purpose: 价值跟进=分享价值/案例线索, 案例分享=具体客户故事+数据, 限时优惠=时效性激励但避免垃圾词, 最终跟进=简短礼貌的break-up email.
+- Keep all personalization variables: {{firstName}}, {{companyName}}, {{industry}}, {{senderName}}.
+- Sign off as {{senderName}}.
+- Avoid spam triggers ("free", "guarantee", all-caps, excessive punctuation).
+- Length: 80-160 words.`;
+
+      const priorBlock = priorEmails
+        .map((e) => `--- Email ${e.step} (${e.name}) ---\nSUBJECT: ${e.subject}\n${e.body}`)
+        .join("\n\n");
+
+      const prompt = `Audience: ${audienceLabel}
+Tone: ${toneLabel}
+
+Prior emails in this sequence:
+${priorBlock}
+
+Now write Email ${stepNum} (${seqMeta.name}).`;
+
+      const text = await callGemini(
+        apiKey,
+        toGeminiMessages([{ role: "user", content: prompt }]),
+        { model, systemInstruction, temperature: 0.85, maxOutputTokens: 1200 }
+      );
+
+      const subjMatch = text.match(/SUBJECT\s*:\s*(.+)/i);
+      const parts = text.split(/^---\s*$/m);
+      const newSubject = subjMatch?.[1]?.trim().replace(/^["']|["']$/g, "") || "";
+      const newBody = (parts[1] || text.replace(/SUBJECT\s*:\s*.+/i, "")).trim();
+      if (!newSubject || !newBody) throw new Error("AI 返回格式异常，请重试");
+
+      setSequenceDrafts((prev) => ({ ...prev, [stepNum]: { subject: newSubject, body: newBody } }));
+      toast.success(`第 ${stepNum} 封「${seqMeta.name}」已生成`);
+    } catch (e) {
+      const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "生成失败";
+      toast.error("AI 生成失败", { description: msg });
+    } finally {
+      setGeneratingSeqStep(null);
+    }
+  };
+
+  const openEditSequence = (stepNum: number) => {
+    const draft = sequenceDrafts[stepNum];
+    if (!draft) {
+      toast.error("请先点击「AI生成」生成内容后再编辑");
+      return;
+    }
+    setEditDraft({ subject: draft.subject, body: draft.body });
+    setEditingSeqStep(stepNum);
+  };
+
+  const saveEditSequence = () => {
+    if (editingSeqStep == null) return;
+    if (!editDraft.subject.trim() || !editDraft.body.trim()) {
+      toast.error("主题和正文不能为空");
+      return;
+    }
+    setSequenceDrafts((prev) => ({ ...prev, [editingSeqStep]: { ...editDraft } }));
+    toast.success(`第 ${editingSeqStep} 封已保存`);
+    setEditingSeqStep(null);
+  };
+
   const handleSend = async () => {
     toast.loading("正在发送邮件...");
     await new Promise((r) => setTimeout(r, 3000));
@@ -579,23 +685,66 @@ Extra context from sender: ${extraInfo || "(none)"}`;
 
           {sequenceEnabled && (
             <div className="space-y-2">
-              {sequenceSteps.map((s) => (
-                <div key={s.step} className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/30">
-                  <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                    s.step === 1 ? "bg-brand-green/15 text-brand-green" : "bg-secondary text-muted-foreground"
-                  )}>{s.step}</div>
-                  <div className="flex-1">
-                    <div className="text-xs font-medium">{s.name}</div>
-                    <div className="text-[10px] text-muted-foreground">{s.delay} · {s.condition}</div>
-                  </div>
-                  {s.step > 1 && (
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => toast("AI生成功能即将上线")}>AI生成</Button>
-                      <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => toast("手动编辑功能即将上线")}>编辑</Button>
+              {sequenceSteps.map((s) => {
+                const draft = sequenceDrafts[s.step];
+                const isThisGenerating = generatingSeqStep === s.step;
+                return (
+                  <div key={s.step} className="p-2.5 rounded-lg bg-secondary/30 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                        s.step === 1 ? "bg-brand-green/15 text-brand-green" :
+                        draft ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
+                      )}>{s.step}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium flex items-center gap-1.5">
+                          {s.name}
+                          {draft && <Badge variant="secondary" className="h-4 text-[9px] px-1.5 bg-brand-green/15 text-brand-green border-0">已生成</Badge>}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">{s.delay} · {s.condition}</div>
+                      </div>
+                      {s.step > 1 && (
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-[10px] px-2"
+                            disabled={isThisGenerating || generatingSeqStep !== null}
+                            onClick={() => handleSequenceGenerate(s.step)}
+                          >
+                            {isThisGenerating ? (
+                              <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> 生成中</>
+                            ) : (
+                              <><Sparkles className="w-3 h-3 mr-1" /> {draft ? "重新生成" : "AI生成"}</>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-[10px] px-2"
+                            disabled={!draft}
+                            onClick={() => openEditSequence(s.step)}
+                          >
+                            编辑
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                    {/* Inline preview of generated content */}
+                    {s.step === 1 && subject && (
+                      <div className="ml-10 text-[10px] space-y-0.5 text-muted-foreground">
+                        <div><span className="text-foreground/70 font-medium">主题：</span>{subject}</div>
+                        <div className="line-clamp-2 opacity-80">{body}</div>
+                      </div>
+                    )}
+                    {draft && s.step > 1 && (
+                      <div className="ml-10 text-[10px] space-y-0.5 text-muted-foreground">
+                        <div><span className="text-foreground/70 font-medium">主题：</span>{draft.subject}</div>
+                        <div className="line-clamp-2 opacity-80 whitespace-pre-wrap">{draft.body}</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -620,6 +769,56 @@ Extra context from sender: ${extraInfo || "(none)"}`;
           </div>
         </div>
       )}
+
+      {/* Sequence Edit Dialog */}
+      <Dialog open={editingSeqStep != null} onOpenChange={(o) => !o && setEditingSeqStep(null)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-sm">
+              编辑第 {editingSeqStep} 封 ·{" "}
+              {sequenceSteps.find((x) => x.step === editingSeqStep)?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">主题行</Label>
+              <Input
+                value={editDraft.subject}
+                onChange={(e) => setEditDraft((d) => ({ ...d, subject: e.target.value }))}
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">正文（支持 {`{{firstName}}`} 等变量）</Label>
+              <Textarea
+                value={editDraft.body}
+                onChange={(e) => setEditDraft((d) => ({ ...d, body: e.target.value }))}
+                className="text-xs min-h-[240px] font-mono"
+              />
+            </div>
+          </div>
+          <div className="flex justify-between gap-2 pt-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={generatingSeqStep != null}
+              onClick={() => {
+                const stepNum = editingSeqStep;
+                if (stepNum != null) {
+                  setEditingSeqStep(null);
+                  handleSequenceGenerate(stepNum);
+                }
+              }}
+            >
+              <RefreshCw className="w-3.5 h-3.5 mr-1" /> AI 重新生成
+            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setEditingSeqStep(null)}>取消</Button>
+              <Button size="sm" onClick={saveEditSequence}>保存</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Email Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
