@@ -2,7 +2,7 @@
  * EmailCreate - 创建邮件活动（4步流程）
  */
 import { useState, useEffect, useRef } from "react";
-import { Sparkles, ArrowRight, ArrowLeft, Eye, Send, RefreshCw, Check, Monitor, Smartphone, ShieldCheck, AlertTriangle, CheckCircle2, XCircle, Loader2, Wand2 } from "lucide-react";
+import { Sparkles, ArrowRight, ArrowLeft, Eye, Send, RefreshCw, Check, Monitor, Smartphone, ShieldCheck, AlertTriangle, CheckCircle2, XCircle, Loader2, Wand2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -75,6 +75,11 @@ export default function EmailCreate() {
   const [generatingSeqStep, setGeneratingSeqStep] = useState<number | null>(null);
   const [editingSeqStep, setEditingSeqStep] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState<SeqDraft>({ subject: "", body: "" });
+
+  // AI-recommended send time per sequence step
+  type SendTimeRec = { localTime: string; weekday: string; tz: string; reason: string };
+  const [sendTimeRecs, setSendTimeRecs] = useState<Record<number, SendTimeRec>>({});
+  const [recommendingTimeStep, setRecommendingTimeStep] = useState<number | null>(null);
 
   const renderPreviewHtml = () => {
     const filled = body
@@ -433,6 +438,54 @@ Now write Email ${stepNum} (${seqMeta.name}).`;
     setEditingSeqStep(null);
   };
 
+  const handleRecommendSendTime = async (stepNum: number) => {
+    if (!hasKey) {
+      toast.error("请先配置 Google AI API Key", { description: "前往设置页配置后即可使用 AI 时机推荐" });
+      return;
+    }
+    const seqMeta = sequenceSteps.find((s) => s.step === stepNum);
+    if (!seqMeta) return;
+    const audienceLabel = audiences.find((a) => a.value === audience)?.label || audience;
+
+    setRecommendingTimeStep(stepNum);
+    try {
+      const systemInstruction = `You are a B2B email-marketing send-time optimizer. Recommend the optimal send time for ONE sequence email, based on the audience's primary business timezone and proven cold-email open-rate research (Tuesday/Wednesday/Thursday 9-11 AM local time typically peak for B2B; Mondays before 9 AM and Fridays after 3 PM perform worst; first emails benefit from morning slots; later follow-ups can use mid-morning or post-lunch).
+
+Return ONLY a JSON object — no prose, no markdown fences:
+{
+  "localTime": "<HH:MM in 24h, recipient local time>",
+  "weekday": "<one of: 周一|周二|周三|周四|周五>",
+  "tz": "<IANA-style label, e.g. America/New_York (EST/EDT) or Europe/London (GMT/BST) — pick the dominant timezone of the audience>",
+  "reason": "<one short Chinese sentence justifying this time given the audience and email purpose>"
+}`;
+
+      const prompt = `Sequence email metadata:
+- Step: ${seqMeta.step} (${seqMeta.name})
+- Delay: ${seqMeta.delay}
+- Trigger: ${seqMeta.condition}
+- Audience: ${audienceLabel}
+
+Recommend the best local send time and weekday for this audience.`;
+
+      const raw = await callGemini(
+        apiKey,
+        toGeminiMessages([{ role: "user", content: prompt }]),
+        { model, systemInstruction, temperature: 0.3, maxOutputTokens: 400 }
+      );
+      const parsed = parseJsonFromAI<SendTimeRec>(raw);
+      if (!parsed.localTime || !parsed.weekday || !parsed.tz) {
+        throw new Error("AI 返回缺少字段");
+      }
+      setSendTimeRecs((prev) => ({ ...prev, [stepNum]: parsed }));
+      toast.success(`第 ${stepNum} 封建议 ${parsed.weekday} ${parsed.localTime} 发送`);
+    } catch (e) {
+      const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "推荐失败";
+      toast.error("AI 推荐发送时机失败", { description: msg });
+    } finally {
+      setRecommendingTimeStep(null);
+    }
+  };
+
   const handleSend = async () => {
     toast.loading("正在发送邮件...");
     await new Promise((r) => setTimeout(r, 3000));
@@ -702,33 +755,62 @@ Now write Email ${stepNum} (${seqMeta.name}).`;
                         </div>
                         <div className="text-[10px] text-muted-foreground">{s.delay} · {s.condition}</div>
                       </div>
-                      {s.step > 1 && (
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 text-[10px] px-2"
-                            disabled={isThisGenerating || generatingSeqStep !== null}
-                            onClick={() => handleSequenceGenerate(s.step)}
-                          >
-                            {isThisGenerating ? (
-                              <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> 生成中</>
-                            ) : (
-                              <><Sparkles className="w-3 h-3 mr-1" /> {draft ? "重新生成" : "AI生成"}</>
-                            )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 text-[10px] px-2"
-                            disabled={!draft}
-                            onClick={() => openEditSequence(s.step)}
-                          >
-                            编辑
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex gap-1 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 text-[10px] px-2"
+                          disabled={recommendingTimeStep === s.step || recommendingTimeStep !== null}
+                          onClick={() => handleRecommendSendTime(s.step)}
+                          title="基于受众时区和 B2B 行业最佳实践推荐发送时间"
+                        >
+                          {recommendingTimeStep === s.step ? (
+                            <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> 推荐中</>
+                          ) : (
+                            <><Clock className="w-3 h-3 mr-1" /> AI推荐时机</>
+                          )}
+                        </Button>
+                        {s.step > 1 && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 text-[10px] px-2"
+                              disabled={isThisGenerating || generatingSeqStep !== null}
+                              onClick={() => handleSequenceGenerate(s.step)}
+                            >
+                              {isThisGenerating ? (
+                                <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> 生成中</>
+                              ) : (
+                                <><Sparkles className="w-3 h-3 mr-1" /> {draft ? "重新生成" : "AI生成"}</>
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 text-[10px] px-2"
+                              disabled={!draft}
+                              onClick={() => openEditSequence(s.step)}
+                            >
+                              编辑
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
+                    {/* AI 推荐发送时机 */}
+                    {sendTimeRecs[s.step] && (
+                      <div className="ml-10 flex items-start gap-2 text-[10px] p-1.5 rounded bg-primary/10 border border-primary/20">
+                        <Clock className="w-3 h-3 text-primary mt-0.5 shrink-0" />
+                        <div className="space-y-0.5">
+                          <div className="text-primary font-medium">
+                            建议 {sendTimeRecs[s.step].weekday} {sendTimeRecs[s.step].localTime}
+                            <span className="text-muted-foreground font-normal"> · {sendTimeRecs[s.step].tz}</span>
+                          </div>
+                          <div className="text-muted-foreground leading-snug">{sendTimeRecs[s.step].reason}</div>
+                        </div>
+                      </div>
+                    )}
                     {/* Inline preview of generated content */}
                     {s.step === 1 && subject && (
                       <div className="ml-10 text-[10px] space-y-0.5 text-muted-foreground">
