@@ -69,6 +69,13 @@ export default function EmailCreate() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
 
+  // 跟进序列草稿（按 step 索引：2..5）
+  const [sequenceDrafts, setSequenceDrafts] = useState<
+    Record<number, { subject: string; body: string }>
+  >({});
+  const [generatingStep, setGeneratingStep] = useState<number | null>(null);
+  const [editingStep, setEditingStep] = useState<number | null>(null);
+
   const renderPreviewHtml = () => {
     const filled = body
       .replace(/\{\{firstName\}\}/g, "John")
