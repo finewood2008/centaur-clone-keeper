@@ -16,6 +16,9 @@ import ResponseTimeDialog from "@/components/dashboard/ResponseTimeDialog";
 import SatisfactionDialog from "@/components/dashboard/SatisfactionDialog";
 import InquiryTrendChart from "@/components/dashboard/InquiryTrendChart";
 import InquiryDialog from "@/components/dashboard/InquiryDialog";
+import { useDashboardStats } from "@/hooks/use-dashboard-stats";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const stagger = {
   hidden: { opacity: 0 },
