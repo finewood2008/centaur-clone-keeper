@@ -90,7 +90,10 @@ export function useUpdateProduct() {
       if (error) throw error;
       return data as Product;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["products", vars.id, "details"] });
+    },
   });
 }
 
@@ -103,4 +106,121 @@ export function useDeleteProduct() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
   });
+}
+
+/* ----------------------- specs ----------------------- */
+
+export interface SpecInput { label: string; value: string }
+
+/** 全量替换某产品的规格列表（先删后插，简单可靠） */
+export function useReplaceProductSpecs() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ productId, specs }: { productId: string; specs: SpecInput[] }) => {
+      const del = await supabase.from("product_specs").delete().eq("product_id", productId);
+      if (del.error) throw del.error;
+      if (specs.length > 0) {
+        const rows = specs.map((s, i) => ({
+          product_id: productId,
+          label: s.label,
+          value: s.value,
+          sort_order: i,
+        }));
+        const ins = await supabase.from("product_specs").insert(rows);
+        if (ins.error) throw ins.error;
+      }
+    },
+    onSuccess: (_d, vars) =>
+      qc.invalidateQueries({ queryKey: ["products", vars.productId, "details"] }),
+  });
+}
+
+/* ----------------------- images ----------------------- */
+
+export interface ImageInput { url: string }
+
+export function useReplaceProductImages() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ productId, images }: { productId: string; images: ImageInput[] }) => {
+      const del = await supabase.from("product_images").delete().eq("product_id", productId);
+      if (del.error) throw del.error;
+      if (images.length > 0) {
+        const rows = images.map((im, i) => ({
+          product_id: productId,
+          url: im.url,
+          sort_order: i,
+        }));
+        const ins = await supabase.from("product_images").insert(rows);
+        if (ins.error) throw ins.error;
+      }
+    },
+    onSuccess: (_d, vars) =>
+      qc.invalidateQueries({ queryKey: ["products", vars.productId, "details"] }),
+  });
+}
+
+/* ----------------------- docs ----------------------- */
+
+export interface DocInput { name: string; url: string; file_size?: string | null }
+
+export function useReplaceProductDocs() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ productId, docs }: { productId: string; docs: DocInput[] }) => {
+      const del = await supabase.from("product_docs").delete().eq("product_id", productId);
+      if (del.error) throw del.error;
+      if (docs.length > 0) {
+        const rows = docs.map((d, i) => ({
+          product_id: productId,
+          name: d.name,
+          url: d.url,
+          file_size: d.file_size ?? null,
+          sort_order: i,
+        }));
+        const ins = await supabase.from("product_docs").insert(rows);
+        if (ins.error) throw ins.error;
+      }
+    },
+    onSuccess: (_d, vars) =>
+      qc.invalidateQueries({ queryKey: ["products", vars.productId, "details"] }),
+  });
+}
+
+/* ----------------------- storage helpers ----------------------- */
+
+function fmtFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+/** 上传产品图片到 Storage，返回公开 URL */
+export async function uploadProductImage(file: File): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("未登录");
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage.from("product-images").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  });
+  if (error) throw error;
+  const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/** 上传产品文档到 Storage，返回 { url, file_size } */
+export async function uploadProductDoc(file: File): Promise<{ url: string; file_size: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("未登录");
+  const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+  const path = `${user.id}/${Date.now()}-${safeName}`;
+  const { error } = await supabase.storage.from("product-docs").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  });
+  if (error) throw error;
+  const { data } = supabase.storage.from("product-docs").getPublicUrl(path);
+  return { url: data.publicUrl, file_size: fmtFileSize(file.size) };
 }
