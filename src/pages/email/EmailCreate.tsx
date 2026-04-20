@@ -334,6 +334,105 @@ Extra context from sender: ${extraInfo || "(none)"}`;
     }
   };
 
+  const handleSequenceGenerate = async (stepNum: number) => {
+    if (!hasKey) {
+      toast.error("请先配置 Google AI API Key", { description: "前往设置页配置后即可使用 AI 序列生成" });
+      return;
+    }
+    if (!subject.trim() || !body.trim()) {
+      toast.error("请先在 Step 2 生成首封邮件，AI 才能基于上下文生成跟进");
+      return;
+    }
+    const seqMeta = sequenceSteps.find((s) => s.step === stepNum);
+    if (!seqMeta) return;
+
+    setGeneratingSeqStep(stepNum);
+    try {
+      const priorEmails: { step: number; name: string; subject: string; body: string }[] = [
+        { step: 1, name: "首次开发信", subject, body },
+      ];
+      for (let i = 2; i < stepNum; i++) {
+        const d = sequenceDrafts[i];
+        if (d) {
+          const meta = sequenceSteps.find((x) => x.step === i);
+          priorEmails.push({ step: i, name: meta?.name || `Email ${i}`, subject: d.subject, body: d.body });
+        }
+      }
+
+      const audienceLabel = audiences.find((a) => a.value === audience)?.label || audience;
+      const toneLabel = toneOptions.find((t) => t.value === tone)?.label || tone;
+
+      const systemInstruction = `You are a senior B2B foreign-trade email-sequence copywriter for OPC LED Technology Co., Ltd. Generate the NEXT email in an automated drip sequence.
+
+CRITICAL OUTPUT FORMAT — return EXACTLY two sections separated by a single line "---":
+SUBJECT: <one-line subject, no quotes, must clearly differ from prior subjects>
+---
+<email body in plain text English>
+
+Rules:
+- This email is "${seqMeta.name}" (${seqMeta.delay}, trigger: ${seqMeta.condition}).
+- Reference the prior thread naturally — do NOT repeat the same opening, value props, or CTA from earlier emails.
+- Match this step's purpose: 价值跟进=分享价值/案例线索, 案例分享=具体客户故事+数据, 限时优惠=时效性激励但避免垃圾词, 最终跟进=简短礼貌的break-up email.
+- Keep all personalization variables: {{firstName}}, {{companyName}}, {{industry}}, {{senderName}}.
+- Sign off as {{senderName}}.
+- Avoid spam triggers ("free", "guarantee", all-caps, excessive punctuation).
+- Length: 80-160 words.`;
+
+      const priorBlock = priorEmails
+        .map((e) => `--- Email ${e.step} (${e.name}) ---\nSUBJECT: ${e.subject}\n${e.body}`)
+        .join("\n\n");
+
+      const prompt = `Audience: ${audienceLabel}
+Tone: ${toneLabel}
+
+Prior emails in this sequence:
+${priorBlock}
+
+Now write Email ${stepNum} (${seqMeta.name}).`;
+
+      const text = await callGemini(
+        apiKey,
+        toGeminiMessages([{ role: "user", content: prompt }]),
+        { model, systemInstruction, temperature: 0.85, maxOutputTokens: 1200 }
+      );
+
+      const subjMatch = text.match(/SUBJECT\s*:\s*(.+)/i);
+      const parts = text.split(/^---\s*$/m);
+      const newSubject = subjMatch?.[1]?.trim().replace(/^["']|["']$/g, "") || "";
+      const newBody = (parts[1] || text.replace(/SUBJECT\s*:\s*.+/i, "")).trim();
+      if (!newSubject || !newBody) throw new Error("AI 返回格式异常，请重试");
+
+      setSequenceDrafts((prev) => ({ ...prev, [stepNum]: { subject: newSubject, body: newBody } }));
+      toast.success(`第 ${stepNum} 封「${seqMeta.name}」已生成`);
+    } catch (e) {
+      const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "生成失败";
+      toast.error("AI 生成失败", { description: msg });
+    } finally {
+      setGeneratingSeqStep(null);
+    }
+  };
+
+  const openEditSequence = (stepNum: number) => {
+    const draft = sequenceDrafts[stepNum];
+    if (!draft) {
+      toast.error("请先点击「AI生成」生成内容后再编辑");
+      return;
+    }
+    setEditDraft({ subject: draft.subject, body: draft.body });
+    setEditingSeqStep(stepNum);
+  };
+
+  const saveEditSequence = () => {
+    if (editingSeqStep == null) return;
+    if (!editDraft.subject.trim() || !editDraft.body.trim()) {
+      toast.error("主题和正文不能为空");
+      return;
+    }
+    setSequenceDrafts((prev) => ({ ...prev, [editingSeqStep]: { ...editDraft } }));
+    toast.success(`第 ${editingSeqStep} 封已保存`);
+    setEditingSeqStep(null);
+  };
+
   const handleSend = async () => {
     toast.loading("正在发送邮件...");
     await new Promise((r) => setTimeout(r, 3000));
