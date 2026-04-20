@@ -69,6 +69,13 @@ export default function EmailCreate() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
 
+  // Sequence drafts (steps 2-5): generated/edited subject + body per step
+  type SeqDraft = { subject: string; body: string };
+  const [sequenceDrafts, setSequenceDrafts] = useState<Record<number, SeqDraft>>({});
+  const [generatingSeqStep, setGeneratingSeqStep] = useState<number | null>(null);
+  const [editingSeqStep, setEditingSeqStep] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState<SeqDraft>({ subject: "", body: "" });
+
   const renderPreviewHtml = () => {
     const filled = body
       .replace(/\{\{firstName\}\}/g, "John")
