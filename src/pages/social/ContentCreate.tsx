@@ -69,27 +69,57 @@ export default function ContentCreate() {
         .filter(Boolean)
         .join("、");
 
-      const systemInstruction = `你是一位资深 B2B 外贸社媒文案专家，擅长为中国制造商撰写吸引海外采购商的高质量 LinkedIn / Facebook / Instagram 帖文。要求：
-- 直接输出最终文案，不要任何前后缀或说明。
-- 包含合适的 emoji、分点列表、清晰的 CTA 与 3-6 个相关 hashtag。
-- 长度 120-220 字，简体中文为主，可混入英文专业术语。`;
+      const systemInstruction = `你是资深 B2B 外贸社媒文案专家，为中国制造商同时产出 LinkedIn / Facebook / Instagram 三个平台的差异化帖文。
 
-      const prompt = `请基于以下信息撰写一条社媒帖文：
+平台差异要求：
+- linkedin：专业、行业洞察口吻；可分点列出价值主张；CTA 偏 B2B（如 "DM for catalog"）；3-5 个专业 hashtag；约 180-260 字。
+- facebook：亲和、社区化口吻；可讲故事或客户场景；CTA 偏沟通（如 "Send us a message"）；2-4 个 hashtag；约 120-180 字。
+- instagram：视觉化、emoji 丰富、短句换行；首句抓眼球；CTA 引导主页/链接；6-10 个高曝光 hashtag；约 80-140 字。
+
+输出格式（严格遵守，禁止任何 Markdown 代码块或额外说明）：
+仅返回一个 JSON 对象：
+{"linkedin":"...","facebook":"...","instagram":"..."}`;
+
+      const prompt = `请基于以下信息生成三个平台的差异化文案：
 【主题】${theme}
 【风格】${style}
 【配图素材】${imgNames || "无"}
 【补充说明】${notes || "无"}`;
 
-      const text = await callGemini(
+      const raw = await callGemini(
         apiKey,
         toGeminiMessages([{ role: "user", content: prompt }]),
-        { model, systemInstruction, temperature: 0.85, maxOutputTokens: 1024 }
+        { model, systemInstruction, temperature: 0.9, maxOutputTokens: 2048 }
       );
 
-      if (!text.trim()) throw new Error("AI 未返回有效内容");
-      setCaption(text);
-      setPlatformCaptions({ linkedin: text, facebook: text, instagram: text });
-      toast({ title: "AI 文案生成完成", description: `主题：${theme} · 风格：${style}` });
+      // Strip ```json fences if model added them
+      const cleaned = raw
+        .trim()
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/```\s*$/i, "")
+        .trim();
+
+      // Extract first {...} block defensively
+      const start = cleaned.indexOf("{");
+      const end = cleaned.lastIndexOf("}");
+      if (start === -1 || end === -1) throw new Error("AI 未返回 JSON 格式");
+
+      const parsed = JSON.parse(cleaned.slice(start, end + 1)) as {
+        linkedin?: string; facebook?: string; instagram?: string;
+      };
+
+      const linkedin = (parsed.linkedin || "").trim();
+      const facebook = (parsed.facebook || "").trim();
+      const instagram = (parsed.instagram || "").trim();
+      if (!linkedin || !facebook || !instagram) throw new Error("AI 返回缺少平台字段，请重试");
+
+      setPlatformCaptions({ linkedin, facebook, instagram });
+      // 主编辑区显示 LinkedIn 版本作为基线，编辑时不再同步覆盖其他平台
+      setCaption(linkedin);
+      toast({
+        title: "AI 已生成 3 个平台差异化文案",
+        description: `主题：${theme} · 风格：${style}`,
+      });
     } catch (e) {
       const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "生成失败";
       toast({ title: "AI 生成失败", description: msg, variant: "destructive" });
