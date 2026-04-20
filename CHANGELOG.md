@@ -6,6 +6,37 @@
 
 ---
 
+## [0.3.0] - 2026-04-20
+
+### 新增
+- **数据库 Schema 设计与 Migration**
+  - `supabase/migrations/20260420_001_initial_schema.sql`：完整数据库建表
+  - 8 张核心表：profiles, customers, products, product_specs, product_images, product_docs, inquiries, messages
+  - 完整的 RLS（行级安全）策略，每个用户只能访问自己的数据
+  - auto-update `updated_at` 触发器
+  - 注册时自动创建 profile 触发器
+- **Seed 数据**
+  - `supabase/migrations/20260420_002_seed_data.sql`：跨境电商真实场景示例数据
+  - 8 个客户（美国/德国/阿联酋/日本/巴西/澳大利亚/英国）
+  - 6 个产品（LED灯泡/太阳能板/钢管/陶瓷花瓶/手机壳/LED灯带）含规格/图片/文档
+  - 7 条询盘 + 对话消息
+- **TypeScript 类型定义更新**
+  - `src/integrations/supabase/types.ts`：完整的 Database 类型定义，覆盖所有表
+- **数据层 Hooks**
+  - `src/hooks/use-customers.ts`：客户 CRUD（查询/创建/更新/删除）
+  - `src/hooks/use-products.ts`：产品 CRUD + 关联规格/图片/文档查询
+  - `src/hooks/use-inquiries.ts`：询盘 + 消息查询，发送消息自动更新询盘状态
+  - `src/hooks/use-auth.ts`：Supabase Auth 认证 hook（登录/注册/登出/会话监听）
+
+### 修复
+- CSS `@import` 顺序修正（Google Fonts @import 移至 @tailwind 之前）
+
+### 移除
+- 删除废弃文件 `src/pages/Index.tsx`（Lovable 占位页）
+- 删除废弃文件 `src/pages/EmailMarketing.tsx`（已被 /email/* 路由替代）
+
+---
+
 ## [0.2.0] - 2026-04-20
 
 ### 新增
