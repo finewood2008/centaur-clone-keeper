@@ -170,12 +170,39 @@ export function useReplaceProductDocs() {
   });
 }
 
-// ---------- File Upload Stubs ----------
+// ---------- File Upload ----------
 
-export function uploadProductImage(_productId: string, _file: File): Promise<ProductImage> {
-  throw new Error('File upload not yet supported in local mode');
+async function uploadFile(file: File): Promise<{ url: string; name: string; size: number; mime: string }> {
+  const arrayBuffer = await file.arrayBuffer();
+  const base64 = btoa(
+    new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+  );
+
+  return apiFetch('/upload', {
+    method: 'POST',
+    body: JSON.stringify({ name: file.name, data: base64, mime: file.type }),
+  });
 }
 
-export function uploadProductDoc(_productId: string, _file: File): Promise<ProductDoc> {
-  throw new Error('File upload not yet supported in local mode');
+export async function uploadProductImage(productId: string, file: File): Promise<ProductImage> {
+  const result = await uploadFile(file);
+  // Return a synthetic ProductImage (actual DB record created via useReplaceProductImages)
+  return {
+    id: crypto.randomUUID(),
+    product_id: productId,
+    url: result.url,
+    sort_order: 0,
+  };
+}
+
+export async function uploadProductDoc(productId: string, file: File): Promise<ProductDoc> {
+  const result = await uploadFile(file);
+  return {
+    id: crypto.randomUUID(),
+    product_id: productId,
+    name: result.name,
+    file_size: result.size,
+    url: result.url,
+    sort_order: 0,
+  };
 }

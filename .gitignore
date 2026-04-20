@@ -28,5 +28,8 @@ server/data/*.db
 server/data/*.db-wal
 server/data/*.db-shm
 
-# Electron build output
+# production build
 release/
+
+# user uploads (local storage)
+uploads/

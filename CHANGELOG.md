@@ -6,6 +6,34 @@
 
 ---
 
+## [0.5.0] - 2026-04-21
+
+### 新增
+- **文件上传端点** (`server/routes/upload.cjs`)
+  - 支持 Base64 JSON 上传和 Raw Binary 上传两种模式
+  - 文件存储在本地 `uploads/` 目录，通过 `/api/trade/uploads/<filename>` 访问
+  - 10MB 文件大小限制，自动生成 UUID 文件名防冲突
+  - `express.static` 静态文件服务，直接返回上传的图片/文档
+- **产品图片/文档上传功能** — `uploadProductImage()` / `uploadProductDoc()` 从 stub 替换为真正实现
+- **JSON body 限制提升** — `express.json({ limit: '15mb' })` 支持大图 base64 上传
+
+### 清理
+- **移除 `@supabase/supabase-js` 依赖** — 项目不再依赖任何 Supabase 包
+- **清空 Supabase 环境变量** — `.env` 中移除 `VITE_SUPABASE_*` 三个变量
+- **精简 `src/integrations/supabase/types.ts`** — 从 541 行缩减为极简兼容层，实际类型定义已迁移到各 hook 文件
+
+### 修复
+- **Inbox.tsx**：`inquiry_id` → `inquiryId`，修复发送消息参数名与 hook 不匹配
+- **ProductDetail.tsx**：`useProductWithDetails` → `useProduct`，`ProductWithDetails` → `ProductWithRelations`，修复类型/函数名不匹配
+- **ProductFormDialog.tsx**：同上，`useProductWithDetails` → `useProduct`
+
+### 技术要点
+- 文件上传使用 base64 JSON 方式，无需额外依赖（不用 multer）
+- 上传文件存储路径：项目根目录 `uploads/`（已加入 `.gitignore`）
+- 前端 `use-products.ts` 中的 `uploadFile()` 将 File 转 base64 后 POST 到 `/api/trade/upload`
+
+---
+
 ## [0.4.0] - 2026-04-21
 
 ### 新增
