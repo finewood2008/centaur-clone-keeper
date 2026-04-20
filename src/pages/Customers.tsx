@@ -1,7 +1,7 @@
 /**
  * Customers - 客户管理 (本地化CRM)
  */
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import CustomerDistributionMap from "@/components/customers/CustomerDistributionMap";
 import DealKanban from "@/components/customers/DealKanban";
 import {
@@ -12,6 +12,7 @@ import {
   ChevronUp, ChevronRight, Sparkles, AlertTriangle,
   Video, FileJson, Folder, File as FileIcon, ExternalLink,
   Shield, X, Pencil, Save, Plus, Trash2, Upload, CheckCircle2, AlertCircle, Kanban,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -22,23 +23,71 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import ApiKeyBanner from "@/components/ApiKeyBanner";
+import {
+  useCustomers,
+  useCreateCustomer,
+  useUpdateCustomer,
+  useDeleteCustomer,
+} from "@/hooks/use-customers";
+import type { Customer as DbCustomer } from "@/hooks/use-customers";
 
-interface Customer {
-  id: number; name: string; company: string; country: string;
-  email: string; phone: string; tier: "A" | "B" | "C";
-  aiScore: number; totalOrders: number; totalValue: string;
-  lastContact: string; channels: string[]; status: "active" | "nurturing" | "cold";
-  tags?: string[];
+// UI 视图模型：把数据库字段映射成原页面用的字段名
+interface CustomerVM {
+  id: string;
+  name: string;
+  company: string;
+  country: string;
+  email: string;
+  phone: string;
+  tier: "A" | "B" | "C";
+  aiScore: number;
+  totalOrders: number;
+  totalValue: string; // 已格式化字符串，如 "$125,000"
+  lastContact: string; // 相对时间，如 "今天" / "3天前"
+  channels: string[];
+  status: "active" | "nurturing" | "cold";
+  tags: string[];
 }
 
-const customers: Customer[] = [
-  { id: 1, name: "John Smith", company: "TechCorp Ltd.", country: "美国", email: "john@techcorp.com", phone: "+1 555-0123", tier: "A", aiScore: 92, totalOrders: 8, totalValue: "$125,000", lastContact: "今天", channels: ["WhatsApp", "Email"], status: "active", tags: ["LED大客户", "长期合作"] },
-  { id: 2, name: "Maria Garcia", company: "EuroTrade GmbH", country: "德国", email: "maria@eurotrade.de", phone: "+49 30-12345", tier: "A", aiScore: 85, totalOrders: 5, totalValue: "$89,000", lastContact: "昨天", channels: ["LinkedIn", "Email"], status: "active", tags: ["欧洲分销", "价格敏感"] },
-  { id: 3, name: "Ahmed Hassan", company: "MidEast Import Co.", country: "阿联酋", email: "ahmed@mideast.ae", phone: "+971 50-1234", tier: "B", aiScore: 68, totalOrders: 3, totalValue: "$45,000", lastContact: "3天前", channels: ["WhatsApp"], status: "nurturing", tags: ["中东工程"] },
-  { id: 4, name: "Yuki Tanaka", company: "Japan Direct Co.", country: "日本", email: "yuki@japandirect.jp", phone: "+81 3-1234", tier: "B", aiScore: 55, totalOrders: 2, totalValue: "$28,000", lastContact: "1周前", channels: ["Email", "阿里巴巴"], status: "nurturing", tags: ["日本市场"] },
-  { id: 5, name: "Roberto Silva", company: "Brazil Imports", country: "巴西", email: "roberto@brazilimports.br", phone: "+55 11-1234", tier: "C", aiScore: 38, totalOrders: 1, totalValue: "$8,500", lastContact: "2周前", channels: ["WhatsApp"], status: "cold", tags: ["新客户"] },
-  { id: 6, name: "Sarah Johnson", company: "Pacific Trading Inc.", country: "澳大利亚", email: "sarah@pacific.au", phone: "+61 2-1234", tier: "B", aiScore: 62, totalOrders: 2, totalValue: "$32,000", lastContact: "5天前", channels: ["独立站", "Email"], status: "active", tags: ["太平洋区"] },
-];
+function formatMoney(n: number | null | undefined): string {
+  const v = Number(n ?? 0);
+  return `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
+function formatRelative(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diffMs = Date.now() - t;
+  const day = 86_400_000;
+  if (diffMs < 0) return "刚刚";
+  if (diffMs < day) return "今天";
+  if (diffMs < 2 * day) return "昨天";
+  if (diffMs < 7 * day) return `${Math.floor(diffMs / day)}天前`;
+  if (diffMs < 30 * day) return `${Math.floor(diffMs / (7 * day))}周前`;
+  if (diffMs < 365 * day) return `${Math.floor(diffMs / (30 * day))}个月前`;
+  return `${Math.floor(diffMs / (365 * day))}年前`;
+}
+
+function toVM(c: DbCustomer): CustomerVM {
+  return {
+    id: c.id,
+    name: c.name ?? "",
+    company: c.company ?? "",
+    country: c.country ?? "",
+    email: c.email ?? "",
+    phone: c.phone ?? "",
+    tier: ((c.tier ?? "C") as "A" | "B" | "C"),
+    aiScore: c.ai_score ?? 0,
+    totalOrders: c.total_orders ?? 0,
+    totalValue: formatMoney(Number(c.total_value ?? 0)),
+    lastContact: formatRelative(c.last_contact_at),
+    channels: c.channels ?? [],
+    status: ((c.status ?? "nurturing") as "active" | "nurturing" | "cold"),
+    tags: c.tags ?? [],
+  };
+}
+
 
 const tierColors: Record<string, string> = {
   A: "bg-primary/15 text-primary border-primary/30",
@@ -90,15 +139,26 @@ const commTypeConfig: Record<string, { icon: typeof Mail; label: string; color: 
 };
 
 export default function Customers() {
+  const { data: dbCustomers = [], isLoading } = useCustomers();
+  const createCustomer = useCreateCustomer();
+  const updateCustomer = useUpdateCustomer();
+  const deleteCustomer = useDeleteCustomer();
+
+  const customerList = useMemo<CustomerVM[]>(
+    () => dbCustomers.map(toVM),
+    [dbCustomers]
+  );
+
   const [activeView, setActiveView] = useState<"list" | "kanban">("list");
   const [selectedTier, setSelectedTier] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerVM | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [expandedComm, setExpandedComm] = useState<number | null>(null);
   const [showFileTree, setShowFileTree] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ email: "", phone: "", tier: "" as "A" | "B" | "C", tags: [] as string[], newTag: "" });
+  const [isSaving, setIsSaving] = useState(false);
   const [showAddComm, setShowAddComm] = useState(false);
   const [communications, setCommunications] = useState(mockCommunications);
   const [commForm, setCommForm] = useState({ type: "email" as "email" | "chat" | "call" | "meeting" | "document", direction: "outbound" as "inbound" | "outbound", subject: "", summary: "" });
@@ -107,9 +167,8 @@ export default function Customers() {
   const [dealForm, setDealForm] = useState({ name: "", value: "", stage: "洽谈中", probability: 50 });
   const [editingDealId, setEditingDealId] = useState<number | null>(null);
   const [editDealForm, setEditDealForm] = useState({ stage: "", probability: 0 });
-  const [customerList, setCustomerList] = useState<Customer[]>(customers);
   const [showImport, setShowImport] = useState(false);
-  const [importPreview, setImportPreview] = useState<Customer[]>([]);
+  const [importPreview, setImportPreview] = useState<Array<Omit<CustomerVM, "id">>>([]);
   const [importFileName, setImportFileName] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -138,15 +197,13 @@ export default function Customers() {
       const countryIdx = headers.findIndex((h) => h.includes("country") || h.includes("国家"));
       const tierIdx = headers.findIndex((h) => h.includes("tier") || h.includes("等级"));
       if (nameIdx === -1) { toast.error("未找到\"姓名/Name\"列，请检查CSV表头"); return; }
-      const maxId = Math.max(...customerList.map((c) => c.id), 0);
-      const parsed: Customer[] = [];
+      const parsed: Array<Omit<CustomerVM, "id">> = [];
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(",").map((c) => c.trim().replace(/"/g, ""));
         const name = cols[nameIdx];
         if (!name) continue;
         const tier = (tierIdx >= 0 ? cols[tierIdx]?.toUpperCase() : "C") as "A" | "B" | "C";
         parsed.push({
-          id: maxId + i,
           name,
           company: companyIdx >= 0 ? cols[companyIdx] || "" : "",
           email: emailIdx >= 0 ? cols[emailIdx] || "" : "",
@@ -166,20 +223,33 @@ export default function Customers() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const confirmImport = () => {
+  const confirmImport = async () => {
     setIsImporting(true);
-    setTimeout(() => {
-      setCustomerList((prev) => [...prev, ...importPreview]);
-      setIsImporting(false);
+    try {
+      // 顺序写入避免 RLS / 事务问题
+      for (const p of importPreview) {
+        await createCustomer.mutateAsync({
+          name: p.name,
+          company: p.company || null,
+          country: p.country || null,
+          email: p.email || null,
+          phone: p.phone || null,
+          tier: p.tier,
+          tags: p.tags,
+          status: p.status,
+        });
+      }
+      toast.success(`成功导入 ${importPreview.length} 位客户`);
       setShowImport(false);
       setImportPreview([]);
-      toast.success(`成功导入 ${importPreview.length} 位客户`, {
-        description: `已保存到 ~/OPC/customers/ 目录`,
-      });
-    }, 1000);
+    } catch (err: any) {
+      toast.error(err?.message || "导入失败");
+    } finally {
+      setIsImporting(false);
+    }
   };
 
-  const openCustomer = (c: Customer) => {
+  const openCustomer = (c: CustomerVM) => {
     setSelectedCustomer(c);
     setDrawerOpen(true);
     setExpandedComm(null);
@@ -199,19 +269,38 @@ export default function Customers() {
     setIsEditing(true);
   };
 
-  const saveEditing = () => {
+  const saveEditing = async () => {
     if (!selectedCustomer) return;
-    setSelectedCustomer({
-      ...selectedCustomer,
-      email: editForm.email,
-      phone: editForm.phone,
-      tier: editForm.tier,
-      tags: editForm.tags,
-    });
-    setIsEditing(false);
-    toast.success("客户信息已更新并保存到本地", {
-      description: `已同步到 ~/OPC/customers/${custId}/profile.json`,
-    });
+    setIsSaving(true);
+    try {
+      const updated = await updateCustomer.mutateAsync({
+        id: selectedCustomer.id,
+        email: editForm.email || null,
+        phone: editForm.phone || null,
+        tier: editForm.tier,
+        tags: editForm.tags,
+      });
+      setSelectedCustomer(toVM(updated));
+      setIsEditing(false);
+      toast.success("客户信息已更新");
+    } catch (err: any) {
+      toast.error(err?.message || "保存失败");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteCustomer = async () => {
+    if (!selectedCustomer) return;
+    if (!confirm(`确定删除客户「${selectedCustomer.name}」？此操作不可恢复。`)) return;
+    try {
+      await deleteCustomer.mutateAsync(selectedCustomer.id);
+      toast.success("客户已删除");
+      setDrawerOpen(false);
+      setSelectedCustomer(null);
+    } catch (err: any) {
+      toast.error(err?.message || "删除失败");
+    }
   };
 
   const addTag = () => {
@@ -252,7 +341,21 @@ export default function Customers() {
     });
   };
 
-  const custId = selectedCustomer ? `CUST-20240315-${String(selectedCustomer.id).padStart(3, "0")}` : "";
+  const custId = selectedCustomer ? `CUST-${selectedCustomer.id.slice(0, 8).toUpperCase()}` : "";
+
+  // 真实统计
+  const stats = useMemo(() => {
+    const total = customerList.length;
+    const tierA = customerList.filter((c) => c.tier === "A").length;
+    const totalValueNum = dbCustomers.reduce((s, c) => s + Number(c.total_value ?? 0), 0);
+    const avgScore = total > 0
+      ? Math.round(customerList.reduce((s, c) => s + (c.aiScore || 0), 0) / total)
+      : 0;
+    const fmtTotal = totalValueNum >= 1_000_000
+      ? `$${(totalValueNum / 1_000_000).toFixed(1)}M`
+      : `$${(totalValueNum / 1000).toFixed(1)}K`;
+    return { total, tierA, totalValue: fmtTotal, avgScore };
+  }, [customerList, dbCustomers]);
 
   return (
     <>
@@ -298,10 +401,10 @@ export default function Customers() {
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "总客户数", value: "156", sub: "↑ 12 本周新增" },
-          { label: "A级客户", value: "23", sub: "高价值客户" },
-          { label: "客户总价值", value: "$1.2M", sub: "↑ 15% vs 上月" },
-          { label: "平均AI评分", value: "67", sub: "/ 100" },
+          { label: "总客户数", value: String(stats.total), sub: `${stats.tierA} 位 A 级` },
+          { label: "A级客户", value: String(stats.tierA), sub: "高价值客户" },
+          { label: "客户总价值", value: stats.totalValue, sub: "累计成交" },
+          { label: "平均AI评分", value: String(stats.avgScore), sub: "/ 100" },
         ].map((s) => (
           <div key={s.label} className="glass-panel metric-card rounded-xl p-4">
             <div className="text-xs text-muted-foreground mb-1">{s.label}</div>
@@ -381,7 +484,19 @@ export default function Customers() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((c) => {
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
+                    <Loader2 className="w-4 h-4 inline animate-spin mr-2" /> 加载客户数据…
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center text-xs text-muted-foreground">
+                    {customerList.length === 0 ? "暂无客户数据，点击右上角「批量导入」开始" : "没有匹配的客户"}
+                  </td>
+                </tr>
+              ) : filtered.map((c) => {
                 const status = statusLabels[c.status];
                 return (
                   <tr key={c.id} className="hover:bg-secondary/30 transition-colors cursor-pointer" onClick={() => openCustomer(c)}>
@@ -440,15 +555,32 @@ export default function Customers() {
                     <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-bold", tierColors[isEditing ? editForm.tier : selectedCustomer.tier])}>{isEditing ? editForm.tier : selectedCustomer.tier}级</span>
                     <Badge variant="outline" className="text-[10px] h-4">AI {selectedCustomer.aiScore}</Badge>
                     {!isEditing ? (
-                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={startEditing}>
-                        <Pencil className="w-3 h-3" />
-                      </Button>
+                      <>
+                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={startEditing}>
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                          onClick={handleDeleteCustomer}
+                          title="删除客户"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </>
                     ) : (
                       <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-brand-green" onClick={saveEditing}>
-                          <Save className="w-3 h-3" />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-brand-green"
+                          onClick={saveEditing}
+                          disabled={isSaving}
+                        >
+                          {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                         </Button>
-                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setIsEditing(false)}>
+                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setIsEditing(false)} disabled={isSaving}>
                           <X className="w-3 h-3" />
                         </Button>
                       </div>
