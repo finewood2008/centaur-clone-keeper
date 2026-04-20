@@ -69,27 +69,57 @@ export default function ContentCreate() {
         .filter(Boolean)
         .join("、");
 
-      const systemInstruction = `你是一位资深 B2B 外贸社媒文案专家，擅长为中国制造商撰写吸引海外采购商的高质量 LinkedIn / Facebook / Instagram 帖文。要求：
-- 直接输出最终文案，不要任何前后缀或说明。
-- 包含合适的 emoji、分点列表、清晰的 CTA 与 3-6 个相关 hashtag。
-- 长度 120-220 字，简体中文为主，可混入英文专业术语。`;
+      const systemInstruction = `你是资深 B2B 外贸社媒文案专家，为中国制造商同时产出 LinkedIn / Facebook / Instagram 三个平台的差异化帖文。
 
-      const prompt = `请基于以下信息撰写一条社媒帖文：
+平台差异要求：
+- linkedin：专业、行业洞察口吻；可分点列出价值主张；CTA 偏 B2B（如 "DM for catalog"）；3-5 个专业 hashtag；约 180-260 字。
+- facebook：亲和、社区化口吻；可讲故事或客户场景；CTA 偏沟通（如 "Send us a message"）；2-4 个 hashtag；约 120-180 字。
+- instagram：视觉化、emoji 丰富、短句换行；首句抓眼球；CTA 引导主页/链接；6-10 个高曝光 hashtag；约 80-140 字。
+
+输出格式（严格遵守，禁止任何 Markdown 代码块或额外说明）：
+仅返回一个 JSON 对象：
+{"linkedin":"...","facebook":"...","instagram":"..."}`;
+
+      const prompt = `请基于以下信息生成三个平台的差异化文案：
 【主题】${theme}
 【风格】${style}
 【配图素材】${imgNames || "无"}
 【补充说明】${notes || "无"}`;
 
-      const text = await callGemini(
+      const raw = await callGemini(
         apiKey,
         toGeminiMessages([{ role: "user", content: prompt }]),
-        { model, systemInstruction, temperature: 0.85, maxOutputTokens: 1024 }
+        { model, systemInstruction, temperature: 0.9, maxOutputTokens: 2048 }
       );
 
-      if (!text.trim()) throw new Error("AI 未返回有效内容");
-      setCaption(text);
-      setPlatformCaptions({ linkedin: text, facebook: text, instagram: text });
-      toast({ title: "AI 文案生成完成", description: `主题：${theme} · 风格：${style}` });
+      // Strip ```json fences if model added them
+      const cleaned = raw
+        .trim()
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/```\s*$/i, "")
+        .trim();
+
+      // Extract first {...} block defensively
+      const start = cleaned.indexOf("{");
+      const end = cleaned.lastIndexOf("}");
+      if (start === -1 || end === -1) throw new Error("AI 未返回 JSON 格式");
+
+      const parsed = JSON.parse(cleaned.slice(start, end + 1)) as {
+        linkedin?: string; facebook?: string; instagram?: string;
+      };
+
+      const linkedin = (parsed.linkedin || "").trim();
+      const facebook = (parsed.facebook || "").trim();
+      const instagram = (parsed.instagram || "").trim();
+      if (!linkedin || !facebook || !instagram) throw new Error("AI 返回缺少平台字段，请重试");
+
+      setPlatformCaptions({ linkedin, facebook, instagram });
+      // 主编辑区显示 LinkedIn 版本作为基线，编辑时不再同步覆盖其他平台
+      setCaption(linkedin);
+      toast({
+        title: "AI 已生成 3 个平台差异化文案",
+        description: `主题：${theme} · 风格：${style}`,
+      });
     } catch (e) {
       const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "生成失败";
       toast({ title: "AI 生成失败", description: msg, variant: "destructive" });
@@ -225,18 +255,36 @@ export default function ContentCreate() {
 
           {caption && (
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold">AI生成的文案（可编辑）</h3>
-              <textarea
-                value={caption}
-                onChange={(e) => {
-                  setCaption(e.target.value);
-                  setPlatformCaptions((p) => ({ ...p, linkedin: e.target.value, facebook: e.target.value, instagram: e.target.value }));
-                }}
-                className="w-full bg-secondary rounded-lg px-3 py-3 text-xs outline-none resize-none min-h-[200px] leading-relaxed"
-              />
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">AI 生成的多平台差异化文案（可分别编辑）</h3>
+                <span className="text-[10px] text-muted-foreground">3 个版本，针对各平台特性优化</span>
+              </div>
+              <Tabs defaultValue="linkedin">
+                <TabsList className="bg-secondary">
+                  <TabsTrigger value="linkedin" className="text-xs gap-1"><Linkedin className="w-3 h-3" /> LinkedIn</TabsTrigger>
+                  <TabsTrigger value="facebook" className="text-xs gap-1"><Facebook className="w-3 h-3" /> Facebook</TabsTrigger>
+                  <TabsTrigger value="instagram" className="text-xs gap-1"><Instagram className="w-3 h-3" /> Instagram</TabsTrigger>
+                </TabsList>
+                {(["linkedin", "facebook", "instagram"] as const).map((p) => (
+                  <TabsContent key={p} value={p} className="mt-3">
+                    <textarea
+                      value={platformCaptions[p] || ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setPlatformCaptions((prev) => ({ ...prev, [p]: v }));
+                        if (p === "linkedin") setCaption(v);
+                      }}
+                      className="w-full bg-secondary rounded-lg px-3 py-3 text-xs outline-none resize-none min-h-[200px] leading-relaxed"
+                    />
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      {(platformCaptions[p] || "").length} 字符
+                    </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
               <div className="flex gap-2">
-                <button onClick={generateCaption} className="text-xs text-muted-foreground border border-border px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-secondary transition-colors">
-                  <RefreshCw className="w-3 h-3" /> 重新生成
+                <button onClick={generateCaption} disabled={isGenerating} className="text-xs text-muted-foreground border border-border px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-secondary transition-colors disabled:opacity-50">
+                  <RefreshCw className={cn("w-3 h-3", isGenerating && "animate-spin")} /> 重新生成全部
                 </button>
                 <button className="text-xs text-muted-foreground border border-border px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-secondary transition-colors">
                   <Save className="w-3 h-3" /> 保存草稿
