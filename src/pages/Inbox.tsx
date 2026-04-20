@@ -85,6 +85,9 @@ export default function Inbox() {
 
   const { data: messages = [] } = useMessages(selectedId ?? undefined);
 
+  // 实时订阅：新询盘 / 新消息自动推送
+  useInboxRealtime(selectedId);
+
   const selectedInquiry = useMemo(
     () => inquiries.find((m) => m.id === selectedId) ?? null,
     [inquiries, selectedId]
