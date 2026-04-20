@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import ApiKeyBanner from "@/components/ApiKeyBanner";
 
 interface EmailCampaign {
   id: number; name: string; status: "active" | "completed" | "draft";
@@ -42,6 +43,7 @@ const emailSequence = [
 export default function EmailMarketing() {
   return (
     <div className="space-y-6">
+      <ApiKeyBanner description="后，AI 开发信生成与自动化跟进序列将自动激活" />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h2 className="font-display font-semibold text-lg">AI EDM邮件营销</h2>

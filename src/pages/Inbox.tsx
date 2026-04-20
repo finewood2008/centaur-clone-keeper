@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import ApiKeyBanner from "@/components/ApiKeyBanner";
 
 type InquiryChannel = "Email" | "独立站" | "Instagram" | "Facebook" | "Twitter";
 
@@ -440,6 +441,7 @@ export default function Inbox() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
