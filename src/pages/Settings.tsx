@@ -1,13 +1,14 @@
 /**
  * Settings - 系统设置页面
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   User, Settings as SettingsIcon, Bot, Shield, Link2, Users, HelpCircle, Wrench,
   Globe, Palette, Bell, HardDrive, ChevronRight, Check, Trash2, RotateCcw, LogOut,
   Mail, MessageSquare, Database, Key, AlertTriangle, BookOpen, Video, MessageCircle,
-  Bug, FlaskConical, ExternalLink,
+  Bug, FlaskConical, ExternalLink, Loader2,
 } from "lucide-react";
+import { useApiKey, GOOGLE_MODELS } from "@/hooks/use-api-key";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/use-theme";
 import { Switch } from "@/components/ui/switch";
