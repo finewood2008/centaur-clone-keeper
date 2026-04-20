@@ -139,15 +139,26 @@ const commTypeConfig: Record<string, { icon: typeof Mail; label: string; color: 
 };
 
 export default function Customers() {
+  const { data: dbCustomers = [], isLoading } = useCustomers();
+  const createCustomer = useCreateCustomer();
+  const updateCustomer = useUpdateCustomer();
+  const deleteCustomer = useDeleteCustomer();
+
+  const customerList = useMemo<CustomerVM[]>(
+    () => dbCustomers.map(toVM),
+    [dbCustomers]
+  );
+
   const [activeView, setActiveView] = useState<"list" | "kanban">("list");
   const [selectedTier, setSelectedTier] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerVM | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [expandedComm, setExpandedComm] = useState<number | null>(null);
   const [showFileTree, setShowFileTree] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ email: "", phone: "", tier: "" as "A" | "B" | "C", tags: [] as string[], newTag: "" });
+  const [isSaving, setIsSaving] = useState(false);
   const [showAddComm, setShowAddComm] = useState(false);
   const [communications, setCommunications] = useState(mockCommunications);
   const [commForm, setCommForm] = useState({ type: "email" as "email" | "chat" | "call" | "meeting" | "document", direction: "outbound" as "inbound" | "outbound", subject: "", summary: "" });
@@ -156,9 +167,8 @@ export default function Customers() {
   const [dealForm, setDealForm] = useState({ name: "", value: "", stage: "洽谈中", probability: 50 });
   const [editingDealId, setEditingDealId] = useState<number | null>(null);
   const [editDealForm, setEditDealForm] = useState({ stage: "", probability: 0 });
-  const [customerList, setCustomerList] = useState<Customer[]>(customers);
   const [showImport, setShowImport] = useState(false);
-  const [importPreview, setImportPreview] = useState<Customer[]>([]);
+  const [importPreview, setImportPreview] = useState<Array<Omit<CustomerVM, "id">>>([]);
   const [importFileName, setImportFileName] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -187,15 +197,13 @@ export default function Customers() {
       const countryIdx = headers.findIndex((h) => h.includes("country") || h.includes("国家"));
       const tierIdx = headers.findIndex((h) => h.includes("tier") || h.includes("等级"));
       if (nameIdx === -1) { toast.error("未找到\"姓名/Name\"列，请检查CSV表头"); return; }
-      const maxId = Math.max(...customerList.map((c) => c.id), 0);
-      const parsed: Customer[] = [];
+      const parsed: Array<Omit<CustomerVM, "id">> = [];
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(",").map((c) => c.trim().replace(/"/g, ""));
         const name = cols[nameIdx];
         if (!name) continue;
         const tier = (tierIdx >= 0 ? cols[tierIdx]?.toUpperCase() : "C") as "A" | "B" | "C";
         parsed.push({
-          id: maxId + i,
           name,
           company: companyIdx >= 0 ? cols[companyIdx] || "" : "",
           email: emailIdx >= 0 ? cols[emailIdx] || "" : "",
@@ -215,20 +223,33 @@ export default function Customers() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const confirmImport = () => {
+  const confirmImport = async () => {
     setIsImporting(true);
-    setTimeout(() => {
-      setCustomerList((prev) => [...prev, ...importPreview]);
-      setIsImporting(false);
+    try {
+      // 顺序写入避免 RLS / 事务问题
+      for (const p of importPreview) {
+        await createCustomer.mutateAsync({
+          name: p.name,
+          company: p.company || null,
+          country: p.country || null,
+          email: p.email || null,
+          phone: p.phone || null,
+          tier: p.tier,
+          tags: p.tags,
+          status: p.status,
+        });
+      }
+      toast.success(`成功导入 ${importPreview.length} 位客户`);
       setShowImport(false);
       setImportPreview([]);
-      toast.success(`成功导入 ${importPreview.length} 位客户`, {
-        description: `已保存到 ~/OPC/customers/ 目录`,
-      });
-    }, 1000);
+    } catch (err: any) {
+      toast.error(err?.message || "导入失败");
+    } finally {
+      setIsImporting(false);
+    }
   };
 
-  const openCustomer = (c: Customer) => {
+  const openCustomer = (c: CustomerVM) => {
     setSelectedCustomer(c);
     setDrawerOpen(true);
     setExpandedComm(null);
@@ -248,19 +269,38 @@ export default function Customers() {
     setIsEditing(true);
   };
 
-  const saveEditing = () => {
+  const saveEditing = async () => {
     if (!selectedCustomer) return;
-    setSelectedCustomer({
-      ...selectedCustomer,
-      email: editForm.email,
-      phone: editForm.phone,
-      tier: editForm.tier,
-      tags: editForm.tags,
-    });
-    setIsEditing(false);
-    toast.success("客户信息已更新并保存到本地", {
-      description: `已同步到 ~/OPC/customers/${custId}/profile.json`,
-    });
+    setIsSaving(true);
+    try {
+      const updated = await updateCustomer.mutateAsync({
+        id: selectedCustomer.id,
+        email: editForm.email || null,
+        phone: editForm.phone || null,
+        tier: editForm.tier,
+        tags: editForm.tags,
+      });
+      setSelectedCustomer(toVM(updated));
+      setIsEditing(false);
+      toast.success("客户信息已更新");
+    } catch (err: any) {
+      toast.error(err?.message || "保存失败");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteCustomer = async () => {
+    if (!selectedCustomer) return;
+    if (!confirm(`确定删除客户「${selectedCustomer.name}」？此操作不可恢复。`)) return;
+    try {
+      await deleteCustomer.mutateAsync(selectedCustomer.id);
+      toast.success("客户已删除");
+      setDrawerOpen(false);
+      setSelectedCustomer(null);
+    } catch (err: any) {
+      toast.error(err?.message || "删除失败");
+    }
   };
 
   const addTag = () => {
