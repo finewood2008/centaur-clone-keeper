@@ -15,6 +15,8 @@ export function useApiKey() {
   const [apiKey, setApiKey] = useState<string>("");
   const [model, setModel] = useState<string>(DEFAULT_MODEL);
   const [loading, setLoading] = useState(true);
+  const [isValid, setIsValid] = useState<boolean | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
 
   useEffect(() => {
     // Read from localStorage
@@ -25,38 +27,87 @@ export function useApiKey() {
     setLoading(false);
   }, []);
 
+  // Persist key + model to localStorage and server
+  const persistToServer = useCallback(async (key: string, m: string) => {
+    try {
+      await apiFetch("/profile", {
+        method: "PUT",
+        body: JSON.stringify({
+          google_api_key: key,
+          google_model: m,
+        }),
+      });
+    } catch {
+      console.warn("Failed to save API key to server profile");
+    }
+  }, []);
+
+  // Save API key (called by Settings page "保存并验证" button)
+  const saveKey = useCallback(
+    (newKey: string) => {
+      localStorage.setItem(API_KEY_STORAGE, newKey);
+      setApiKey(newKey);
+      persistToServer(newKey, model);
+    },
+    [model, persistToServer]
+  );
+
+  // Save model selection (called by Settings page model dropdown)
+  const saveModel = useCallback(
+    (newModel: string) => {
+      localStorage.setItem(MODEL_STORAGE, newModel);
+      setModel(newModel);
+      persistToServer(apiKey, newModel);
+    },
+    [apiKey, persistToServer]
+  );
+
+  // Combined save (for backward compat)
   const saveApiKey = useCallback(
     async (newKey: string, newModel?: string) => {
       const m = newModel || model;
-
-      // Save to localStorage
       localStorage.setItem(API_KEY_STORAGE, newKey);
       localStorage.setItem(MODEL_STORAGE, m);
       setApiKey(newKey);
       setModel(m);
-
-      // Persist to server profile
-      try {
-        await apiFetch("/profile", {
-          method: "PUT",
-          body: JSON.stringify({
-            google_api_key: newKey,
-            google_model: m,
-          }),
-        });
-      } catch {
-        // Server save failed, but localStorage is updated — acceptable for local-first
-        console.warn("Failed to save API key to server profile");
-      }
+      await persistToServer(newKey, m);
     },
-    [model]
+    [model, persistToServer]
   );
+
+  // Validate key by making a lightweight Gemini API call
+  const validateKey = useCallback(async (key: string): Promise<boolean> => {
+    if (!key || !key.trim()) {
+      setIsValid(false);
+      return false;
+    }
+    setIsValidating(true);
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`,
+        { method: "GET" }
+      );
+      const valid = res.ok;
+      setIsValid(valid);
+      return valid;
+    } catch {
+      setIsValid(false);
+      return false;
+    } finally {
+      setIsValidating(false);
+    }
+  }, []);
 
   return {
     apiKey,
     model,
     loading,
+    saveKey,
+    saveModel,
     saveApiKey,
+    validateKey,
+    isValid,
+    isValidating,
     hasApiKey: !!apiKey,
   };
 }
@@ -77,7 +128,7 @@ export function useHasApiKey(): boolean {
 
 // Available Gemini models
 export const GOOGLE_MODELS = [
-  { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash (推荐)" },
-  { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
-  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
+  { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash (推荐)", desc: "最快速度，适合日常对话" },
+  { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro", desc: "更强推理，适合复杂任务" },
+  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash", desc: "上代快速模型" },
 ] as const;
