@@ -144,7 +144,9 @@ export default function ProductDetail({
                 if (jsonStr === "[DONE]") continue;
                 try {
                   const parsed = JSON.parse(jsonStr);
-                  const delta = parsed.choices?.[0]?.delta?.content;
+                  const delta =
+                    parsed.candidates?.[0]?.content?.parts?.[0]?.text ||
+                    parsed.choices?.[0]?.delta?.content;
                   if (delta) {
                     accumulated += delta;
                     setMessages((prev) => {
@@ -167,7 +169,9 @@ export default function ProductDetail({
               if (jsonStr === "[DONE]") continue;
               try {
                 const parsed = JSON.parse(jsonStr);
-                const delta = parsed.choices?.[0]?.delta?.content;
+                const delta =
+                  parsed.candidates?.[0]?.content?.parts?.[0]?.text ||
+                  parsed.choices?.[0]?.delta?.content;
                 if (delta) accumulated += delta;
               } catch {}
             }
