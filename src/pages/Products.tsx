@@ -611,6 +611,12 @@ export default function Products() {
           </div>
         </div>
       )}
+
+      <ProductFormDialog
+        open={productFormOpen}
+        onOpenChange={(v) => { setProductFormOpen(v); if (!v) setEditingProductId(null); }}
+        productId={editingProductId}
+      />
     </div>
   );
 }
