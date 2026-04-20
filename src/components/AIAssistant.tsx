@@ -1,10 +1,12 @@
 /**
- * AIAssistant - 浮动AI助手
+ * AIAssistant - 浮动AI助手（接入 Google Gemini 流式 API）
  */
 import { useState, useRef, useEffect } from "react";
 import { Bot, X, Send, Sparkles, Minimize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { streamGemini, type GeminiMessage } from "@/lib/gemini";
+import { getStoredApiKey, getStoredModel } from "@/hooks/use-api-key";
 
 interface ChatMessage {
   id: number;
@@ -23,26 +25,18 @@ const initialMessages: ChatMessage[] = [
 
 const quickActions = ["帮我分析最新询盘", "生成一封开发信", "优化产品描述", "查看今日数据摘要"];
 
-function getAIResponse(input: string): string {
-  const lower = input.toLowerCase();
-  if (lower.includes("询盘") || lower.includes("分析")) {
-    return "今日共收到31条询盘，其中高优先级5条。最值得关注的是来自TechCorp的John Smith，询问LED灯泡5000个的FOB报价，建议优先跟进。AI已自动回复了26条，还有3条待您审核。";
-  }
-  if (lower.includes("开发信") || lower.includes("邮件")) {
-    return "我可以帮您生成针对性的开发信。请告诉我：\n1. 目标客户所在行业\n2. 主推产品\n3. 目标市场\n\n我会根据这些信息生成高转化率的开发信模板。";
-  }
-  if (lower.includes("产品") || lower.includes("描述")) {
-    return "产品库中有8个产品尚未AI优化。建议优先处理Steel Pipe DN100，该产品询盘量增长较快但描述较简单。我可以帮您生成多语言SEO优化描述。";
-  }
-  if (lower.includes("数据") || lower.includes("摘要")) {
-    return "今日数据摘要：\n• 询盘：31条（↑24%）\n• AI处理率：83.9%\n• 活跃客户：156个\n• 预估成交额：$48.5K\n• 最活跃渠道：独立站（45条）\n• 待处理：3条待审核回复";
-  }
-  return "感谢您的提问！我正在分析您的问题，请稍等。您也可以尝试问我关于询盘分析、开发信生成、产品优化等方面的问题。";
-}
+const SYSTEM_INSTRUCTION = `你是半人马AI助手，一个专业的跨境电商运营助手。你的能力包括：
+1. 分析询盘数据，识别高价值客户
+2. 生成专业的外贸开发信和回复
+3. 优化产品描述，支持多语言
+4. 提供数据分析和运营建议
+5. 帮助制定社媒内容策略
+请用中文回复，语气专业友好，回复简洁实用。`;
 
 export default function AIAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [history, setHistory] = useState<GeminiMessage[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -51,26 +45,65 @@ export default function AIAssistant() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    const userMsg: ChatMessage = { id: Date.now(), role: "user", content: input, time: "刚刚" };
+  const sendToGemini = async (userInput: string) => {
+    const apiKey = getStoredApiKey();
+
+    const userMsg: ChatMessage = { id: Date.now(), role: "user", content: userInput, time: "刚刚" };
     setMessages((prev) => [...prev, userMsg]);
-    const q = input;
-    setInput("");
     setIsTyping(true);
-    setTimeout(() => {
-      setMessages((prev) => [...prev, { id: Date.now() + 1, role: "assistant", content: getAIResponse(q), time: "刚刚" }]);
+
+    if (!apiKey) {
+      setMessages((prev) => [...prev, {
+        id: Date.now() + 1,
+        role: "assistant",
+        content: "⚠️ 请先在「设置 → AI Agent 配置」中配置 Google AI API Key，即可使用 AI 助手。",
+        time: "刚刚",
+      }]);
       setIsTyping(false);
-    }, 1200);
+      return;
+    }
+
+    const newHistory: GeminiMessage[] = [...history, { role: "user", parts: [{ text: userInput }] }];
+    const assistantId = Date.now() + 1;
+    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "", time: "刚刚" }]);
+
+    try {
+      let fullText = "";
+      const stream = streamGemini(apiKey, newHistory, {
+        model: getStoredModel(),
+        systemInstruction: SYSTEM_INSTRUCTION,
+      });
+
+      for await (const chunk of stream) {
+        fullText += chunk;
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, content: fullText } : m))
+        );
+      }
+
+      if (fullText) {
+        setHistory([...newHistory, { role: "model", parts: [{ text: fullText }] }]);
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "AI 服务暂时不可用";
+      setMessages((prev) =>
+        prev.map((m) => (m.id === assistantId ? { ...m, content: `❌ ${errorMsg}` } : m))
+      );
+    } finally {
+      setIsTyping(false);
+    }
   };
 
-  const handleQuickAction = (action: string) => {
-    setMessages((prev) => [...prev, { id: Date.now(), role: "user", content: action, time: "刚刚" }]);
-    setIsTyping(true);
-    setTimeout(() => {
-      setMessages((prev) => [...prev, { id: Date.now() + 1, role: "assistant", content: getAIResponse(action), time: "刚刚" }]);
-      setIsTyping(false);
-    }, 1500);
+  const handleSend = async () => {
+    if (!input.trim() || isTyping) return;
+    const userInput = input;
+    setInput("");
+    await sendToGemini(userInput);
+  };
+
+  const handleQuickAction = async (action: string) => {
+    if (isTyping) return;
+    await sendToGemini(action);
   };
 
   return (
@@ -126,11 +159,11 @@ export default function AIAssistant() {
                     "max-w-[85%] rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap",
                     msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
                   )}>
-                    {msg.content}
+                    {msg.content || (msg.role === "assistant" && isTyping ? <span className="text-muted-foreground animate-pulse">…</span> : null)}
                   </div>
                 </div>
               ))}
-              {isTyping && (
+              {isTyping && messages[messages.length - 1]?.role === "user" && (
                 <div className="flex justify-start">
                   <div className="bg-secondary rounded-lg px-3 py-2 text-xs text-muted-foreground">
                     <span className="animate-pulse">正在思考...</span>
@@ -164,7 +197,7 @@ export default function AIAssistant() {
                 placeholder="输入您的问题..."
                 className="flex-1 bg-secondary rounded-md px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground outline-none"
               />
-              <button onClick={handleSend} className="w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition-colors">
+              <button onClick={handleSend} disabled={isTyping} className="w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition-colors disabled:opacity-50">
                 <Send className="w-3.5 h-3.5" />
               </button>
             </div>
