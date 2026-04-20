@@ -97,9 +97,18 @@ export default function ProductDetail({
       const botMsg: ChatMessage = { role: "assistant", content: "", timestamp: new Date() };
       setMessages([...allMessages, botMsg]);
 
+      const googleApiKey = localStorage.getItem("banrenma_google_api_key");
+      if (!googleApiKey) {
+        toast({ title: "需要配置 AI", description: "请前往设置 > AI Agent 配置，填入 Google AI API Key" });
+        setIsStreaming(false);
+        setMessages(allMessages);
+        return;
+      }
+
       try {
         abortRef.current = new AbortController();
         const { data, error } = await supabase.functions.invoke("product-bot", {
+          headers: { "x-google-api-key": googleApiKey },
           body: {
             productName: product.name,
             productSku: product.sku,

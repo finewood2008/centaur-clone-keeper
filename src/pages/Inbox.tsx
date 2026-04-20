@@ -100,6 +100,12 @@ export default function Inbox() {
     const inquiry = inquiries.find((m) => m.id === inquiryId);
     if (!inquiry) return;
 
+    const googleApiKey = localStorage.getItem("banrenma_google_api_key");
+    if (!googleApiKey) {
+      toast({ title: "需要配置 AI", description: "请前往设置 > AI Agent 配置，填入 Google AI API Key" });
+      return;
+    }
+
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -117,6 +123,7 @@ export default function Inbox() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          "x-google-api-key": googleApiKey,
         },
         body: JSON.stringify({
           customerName: inquiry.name,
@@ -159,7 +166,11 @@ export default function Inbox() {
 
           try {
             const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            // Gemini SSE format: { candidates: [{ content: { parts: [{ text }] } }] }
+            // Fallback to OpenAI format: { choices: [{ delta: { content } }] }
+            const content =
+              (parsed.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined) ||
+              (parsed.choices?.[0]?.delta?.content as string | undefined);
             if (content) {
               fullText += content;
               setAiReply(fullText);
