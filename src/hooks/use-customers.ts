@@ -4,11 +4,11 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, InsertTables, UpdateTables } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type Customer = Tables<"customers">;
-export type CustomerInsert = InsertTables<"customers">;
-export type CustomerUpdate = UpdateTables<"customers">;
+export type CustomerInsert = TablesInsert<"customers">;
+export type CustomerUpdate = TablesUpdate<"customers">;
 
 export function useCustomers() {
   return useQuery({
