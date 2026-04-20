@@ -74,70 +74,62 @@ export default function ContentCreate() {
     if (!theme || !style) return;
 
     setIsGenerating(true);
+    setPlatformCaptions({ linkedin: "", facebook: "", instagram: "" });
+    setCaption("");
+    setActiveTab("linkedin");
+
     try {
       const imgNames = selectedImages
         .map((id) => sampleImages.find((i) => i.id === id)?.name)
         .filter(Boolean)
         .join("、");
 
-      const systemInstruction = `你是资深 B2B 外贸社媒文案专家，为中国制造商同时产出 LinkedIn / Facebook / Instagram 三个平台的差异化帖文。
+      const baseContext = `【主题】${theme}\n【风格】${style}\n【配图素材】${imgNames || "无"}\n【补充说明】${notes || "无"}`;
+      const finalCaptions: Record<Platform, string> = { linkedin: "", facebook: "", instagram: "" };
 
-平台差异要求：
-- linkedin：专业、行业洞察口吻；可分点列出价值主张；CTA 偏 B2B（如 "DM for catalog"）；3-5 个专业 hashtag；约 180-260 字。
-- facebook：亲和、社区化口吻；可讲故事或客户场景；CTA 偏沟通（如 "Send us a message"）；2-4 个 hashtag；约 120-180 字。
-- instagram：视觉化、emoji 丰富、短句换行；首句抓眼球；CTA 引导主页/链接；6-10 个高曝光 hashtag；约 80-140 字。
+      // 顺序流式生成三个平台，逐字呈现
+      for (const platform of PLATFORM_ORDER) {
+        setActiveTab(platform);
+        setStreamingPlatform(platform);
 
-输出格式（严格遵守，禁止任何 Markdown 代码块或额外说明）：
-仅返回一个 JSON 对象：
-{"linkedin":"...","facebook":"...","instagram":"..."}`;
+        const systemInstruction = `你是资深 B2B 外贸社媒文案专家，正在为中国制造商撰写 ${platform.toUpperCase()} 平台的帖文。
+平台风格要求：${PLATFORM_BRIEF[platform]}
+直接输出文案正文，禁止任何前缀解释、Markdown 代码块或 JSON 包装。`;
 
-      const prompt = `请基于以下信息生成三个平台的差异化文案：
-【主题】${theme}
-【风格】${style}
-【配图素材】${imgNames || "无"}
-【补充说明】${notes || "无"}`;
+        let buffer = "";
+        const stream = streamGemini(
+          apiKey,
+          toGeminiMessages([{ role: "user", content: `请基于以下信息为 ${platform} 平台生成一段帖文：\n${baseContext}` }]),
+          { model, systemInstruction, temperature: 0.9, maxOutputTokens: 1024 }
+        );
 
-      const raw = await callGemini(
-        apiKey,
-        toGeminiMessages([{ role: "user", content: prompt }]),
-        { model, systemInstruction, temperature: 0.9, maxOutputTokens: 2048 }
-      );
+        for await (const chunk of stream) {
+          buffer += chunk;
+          // 实时更新当前平台文案，触发逐字效果
+          setPlatformCaptions((prev) => ({ ...prev, [platform]: buffer }));
+          if (platform === "linkedin") setCaption(buffer);
+        }
 
-      // Strip ```json fences if model added them
-      const cleaned = raw
-        .trim()
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/```\s*$/i, "")
-        .trim();
+        finalCaptions[platform] = buffer.trim();
+        if (!finalCaptions[platform]) throw new Error(`${platform} 平台未返回内容`);
+        setPlatformCaptions((prev) => ({ ...prev, [platform]: finalCaptions[platform] }));
+        if (platform === "linkedin") setCaption(finalCaptions[platform]);
+      }
 
-      // Extract first {...} block defensively
-      const start = cleaned.indexOf("{");
-      const end = cleaned.lastIndexOf("}");
-      if (start === -1 || end === -1) throw new Error("AI 未返回 JSON 格式");
-
-      const parsed = JSON.parse(cleaned.slice(start, end + 1)) as {
-        linkedin?: string; facebook?: string; instagram?: string;
-      };
-
-      const linkedin = (parsed.linkedin || "").trim();
-      const facebook = (parsed.facebook || "").trim();
-      const instagram = (parsed.instagram || "").trim();
-      if (!linkedin || !facebook || !instagram) throw new Error("AI 返回缺少平台字段，请重试");
-
-      setPlatformCaptions({ linkedin, facebook, instagram });
-      // 主编辑区显示 LinkedIn 版本作为基线，编辑时不再同步覆盖其他平台
-      setCaption(linkedin);
+      setStreamingPlatform(null);
       toast({
-        title: "AI 已生成 3 个平台差异化文案",
+        title: "AI 已逐字生成 3 个平台差异化文案",
         description: `主题：${theme} · 风格：${style}`,
       });
     } catch (e) {
       const msg = e instanceof GeminiError ? e.message : e instanceof Error ? e.message : "生成失败";
       toast({ title: "AI 生成失败", description: msg, variant: "destructive" });
+      setStreamingPlatform(null);
     } finally {
       setIsGenerating(false);
     }
   }, [apiKey, model, hasKey, theme, style, notes, selectedImages]);
+
 
   const handlePublish = () => {
     toast({
