@@ -685,23 +685,66 @@ Now write Email ${stepNum} (${seqMeta.name}).`;
 
           {sequenceEnabled && (
             <div className="space-y-2">
-              {sequenceSteps.map((s) => (
-                <div key={s.step} className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/30">
-                  <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                    s.step === 1 ? "bg-brand-green/15 text-brand-green" : "bg-secondary text-muted-foreground"
-                  )}>{s.step}</div>
-                  <div className="flex-1">
-                    <div className="text-xs font-medium">{s.name}</div>
-                    <div className="text-[10px] text-muted-foreground">{s.delay} · {s.condition}</div>
-                  </div>
-                  {s.step > 1 && (
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => toast("AI生成功能即将上线")}>AI生成</Button>
-                      <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => toast("手动编辑功能即将上线")}>编辑</Button>
+              {sequenceSteps.map((s) => {
+                const draft = sequenceDrafts[s.step];
+                const isThisGenerating = generatingSeqStep === s.step;
+                return (
+                  <div key={s.step} className="p-2.5 rounded-lg bg-secondary/30 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                        s.step === 1 ? "bg-brand-green/15 text-brand-green" :
+                        draft ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
+                      )}>{s.step}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium flex items-center gap-1.5">
+                          {s.name}
+                          {draft && <Badge variant="secondary" className="h-4 text-[9px] px-1.5 bg-brand-green/15 text-brand-green border-0">已生成</Badge>}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">{s.delay} · {s.condition}</div>
+                      </div>
+                      {s.step > 1 && (
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-[10px] px-2"
+                            disabled={isThisGenerating || generatingSeqStep !== null}
+                            onClick={() => handleSequenceGenerate(s.step)}
+                          >
+                            {isThisGenerating ? (
+                              <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> 生成中</>
+                            ) : (
+                              <><Sparkles className="w-3 h-3 mr-1" /> {draft ? "重新生成" : "AI生成"}</>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-[10px] px-2"
+                            disabled={!draft}
+                            onClick={() => openEditSequence(s.step)}
+                          >
+                            编辑
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                    {/* Inline preview of generated content */}
+                    {s.step === 1 && subject && (
+                      <div className="ml-10 text-[10px] space-y-0.5 text-muted-foreground">
+                        <div><span className="text-foreground/70 font-medium">主题：</span>{subject}</div>
+                        <div className="line-clamp-2 opacity-80">{body}</div>
+                      </div>
+                    )}
+                    {draft && s.step > 1 && (
+                      <div className="ml-10 text-[10px] space-y-0.5 text-muted-foreground">
+                        <div><span className="text-foreground/70 font-medium">主题：</span>{draft.subject}</div>
+                        <div className="line-clamp-2 opacity-80 whitespace-pre-wrap">{draft.body}</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
