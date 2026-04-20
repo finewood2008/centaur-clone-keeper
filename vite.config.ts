@@ -11,6 +11,18 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
+    proxy: {
+      // 本地后端 API
+      '/api/trade': {
+        target: 'http://localhost:3456',
+        changeOrigin: true,
+      },
+      // QeeClaw Bridge Server (预留)
+      '/api': {
+        target: 'http://localhost:21747',
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

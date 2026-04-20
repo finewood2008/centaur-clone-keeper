@@ -1,0 +1,47 @@
+const express = require('express');
+const cors = require('cors');
+const { initDatabase } = require('./db.cjs');
+
+const app = express();
+const PORT = process.env.PORT || 3456;
+
+// Middleware
+app.use(cors({ origin: '*' }));
+app.use(express.json());
+
+// Request logging
+app.use((req, _res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
+
+// Health check
+app.get('/api/trade/health', (_req, res) => {
+  res.json({ code: 0, data: { status: 'ok', service: 'trade-api', port: PORT }, message: 'success' });
+});
+
+// Mount route files
+app.use('/api/trade/auth', require('./routes/auth.cjs'));
+app.use('/api/trade/customers', require('./routes/customers.cjs'));
+app.use('/api/trade/products', require('./routes/products.cjs'));
+app.use('/api/trade/inquiries', require('./routes/inquiries.cjs'));
+app.use('/api/trade/profile', require('./routes/profile.cjs'));
+app.use('/api/trade/dashboard', require('./routes/dashboard.cjs'));
+
+// Start server
+async function start() {
+  try {
+    await initDatabase();
+    console.log('Database initialized.');
+    app.listen(PORT, () => {
+      console.log(`Trade API server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
+}
+
+start();
+
+module.exports = app;
