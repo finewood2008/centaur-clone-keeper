@@ -118,13 +118,13 @@ function AccountSection() {
       <SectionCard title="账户信息" icon={User}>
         <div className="space-y-2 text-xs">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-lg font-bold text-primary">嘉</div>
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-lg font-bold text-primary">U</div>
             <div>
-              <div className="font-semibold text-sm">嘉木</div>
-              <div className="text-muted-foreground">jiamu@example.com</div>
+              <div className="font-semibold text-sm">用户</div>
+              <div className="text-muted-foreground">user@example.com</div>
             </div>
           </div>
-          <SettingRow label="公司" desc="半人马AI"><span className="text-xs text-muted-foreground">编辑</span></SettingRow>
+          <SettingRow label="公司" desc="我的公司"><span className="text-xs text-muted-foreground">编辑</span></SettingRow>
           <SettingRow label="手机" desc="+86 138****1234"><span className="text-xs text-muted-foreground">修改</span></SettingRow>
         </div>
       </SectionCard>
@@ -390,9 +390,9 @@ function IntegrationsSection() {
 /* === Team === */
 function TeamSection() {
   const members = [
-    { name: "嘉木", role: "管理员" },
-    { name: "张三", role: "成员" },
-    { name: "李四", role: "成员" },
+    { name: "管理员", role: "管理员" },
+    { name: "成员A", role: "成员" },
+    { name: "成员B", role: "成员" },
   ];
 
   return (
