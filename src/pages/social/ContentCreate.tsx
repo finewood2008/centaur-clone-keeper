@@ -53,6 +53,8 @@ export default function ContentCreate() {
   const [platformCaptions, setPlatformCaptions] = useState<Record<string, string>>({});
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["linkedin"]);
   const [publishMode, setPublishMode] = useState<"now" | "scheduled">("now");
+  const [activeTab, setActiveTab] = useState<Platform>("linkedin");
+  const [streamingPlatform, setStreamingPlatform] = useState<Platform | null>(null);
 
   const toggleImage = (id: string) => {
     setSelectedImages((prev) =>
