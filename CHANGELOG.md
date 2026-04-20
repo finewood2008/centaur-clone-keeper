@@ -6,6 +6,33 @@
 
 ---
 
+## [0.4.0] - 2026-04-21
+
+### 新增
+- **本地 Express + SQLite 后端** (`server/` 目录)
+  - `server/index.cjs`：Express 服务器入口，监听端口 3456，挂载 6 个路由模块
+  - `server/db.cjs`：better-sqlite3 数据库初始化（WAL 模式、自动建表、自动 seed）
+  - `server/middleware.cjs`：JWT Bearer Token 认证中间件（jsonwebtoken）
+  - **8 张数据表**：profiles, customers, products, product_specs, product_images, product_docs, inquiries, messages
+  - 13 个数据库索引，外键约束与 CHECK 约束完整覆盖
+- **6 个路由文件**
+  - `server/routes/auth.cjs`：注册 / 登录 / 会话刷新（bcryptjs 密码哈希 + JWT 签发）
+  - `server/routes/customers.cjs`：客户 CRUD
+  - `server/routes/products.cjs`：产品 CRUD（含关联 specs / images / docs）
+  - `server/routes/inquiries.cjs`：询盘 + 消息查询与发送
+  - `server/routes/profile.cjs`：用户资料查询与更新
+  - `server/routes/dashboard.cjs`：仪表盘统计数据聚合
+- **Demo 账号**：`demo@centaur.ai` / `demo123`，首次启动自动 seed（8 客户 / 6 产品 / 7 询盘 + 对话消息）
+- **Vite 代理配置**：`vite.config.ts` 添加 `/api/trade` → `http://localhost:3456` 代理规则，前端开发零配置对接后端
+
+### 技术要点
+- 全部使用 CommonJS (`.cjs`) 避免与前端 ESM 构建冲突
+- 数据库文件存放于 `server/data/trade.db`，已加入 `.gitignore`
+- 密码使用 bcryptjs (cost=10) 哈希存储
+- JWT Token 通过 `Authorization: Bearer <token>` 头传递
+
+---
+
 ## [0.3.0] - 2026-04-20
 
 ### 新增
