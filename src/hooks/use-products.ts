@@ -4,14 +4,14 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, InsertTables, UpdateTables } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type Product = Tables<"products">;
 export type ProductSpec = Tables<"product_specs">;
 export type ProductImage = Tables<"product_images">;
 export type ProductDoc = Tables<"product_docs">;
-export type ProductInsert = InsertTables<"products">;
-export type ProductUpdate = UpdateTables<"products">;
+export type ProductInsert = TablesInsert<"products">;
+export type ProductUpdate = TablesUpdate<"products">;
 
 export interface ProductWithDetails extends Product {
   specs: ProductSpec[];
