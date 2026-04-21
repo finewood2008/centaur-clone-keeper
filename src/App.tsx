@@ -56,7 +56,7 @@ const App = () => (
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/inbox" element={<Inbox />} />
                       <Route path="/social" element={<SocialLayout />}>
-                        <Route index element={<Navigate to="accounts" replace />} />
+                        <Route index element={<Navigate to="calendar" replace />} />
                         <Route path="accounts" element={<SocialAccounts />} />
                         <Route path="assets" element={<AssetLibrary />} />
                         <Route path="create" element={<ContentCreate />} />

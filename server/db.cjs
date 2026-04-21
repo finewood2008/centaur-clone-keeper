@@ -113,6 +113,25 @@ function initDatabase() {
       sort_order INTEGER DEFAULT 0
     );
 
+    -- 3d. CONTENT_POSTS (media center)
+    CREATE TABLE IF NOT EXISTS content_posts (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL DEFAULT '',
+      platforms TEXT DEFAULT '["linkedin"]',
+      status TEXT CHECK (status IN ('draft','scheduled','published','failed')) DEFAULT 'draft',
+      scheduled_at TEXT,
+      published_at TEXT,
+      theme TEXT,
+      style TEXT,
+      hashtags TEXT DEFAULT '[]',
+      media_urls TEXT DEFAULT '[]',
+      ai_generated INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
     -- 4. INQUIRIES
     CREATE TABLE IF NOT EXISTS inquiries (
       id TEXT PRIMARY KEY,
@@ -158,6 +177,9 @@ function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_product_specs_product ON product_specs(product_id);
     CREATE INDEX IF NOT EXISTS idx_product_images_product ON product_images(product_id);
     CREATE INDEX IF NOT EXISTS idx_product_docs_product ON product_docs(product_id);
+    CREATE INDEX IF NOT EXISTS idx_content_posts_user ON content_posts(user_id);
+    CREATE INDEX IF NOT EXISTS idx_content_posts_status ON content_posts(status);
+    CREATE INDEX IF NOT EXISTS idx_content_posts_scheduled ON content_posts(scheduled_at);
   `);
 
   // Auto-seed if profiles table is empty
@@ -423,10 +445,166 @@ function seedDemoData() {
     insertMessage.run(crypto.randomUUID(), i7, 'customer',
       'Requirements: 400W mono panels, IEC 61215 certified, 25-year warranty minimum. Delivery to London port, CIF terms preferred.',
       null, 0, '-25 minutes');
+
+    // ------------------------------------------------------------------
+    // CONTENT_POSTS (media center demo data)
+    // ------------------------------------------------------------------
+    const insertContent = db.prepare(`
+      INSERT INTO content_posts
+        (id, user_id, title, content, platforms, status, scheduled_at, published_at,
+         theme, style, hashtags, media_urls, ai_generated, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const contentPosts = [
+      {
+        title: '2026年LED照明行业趋势分析',
+        content: '随着全球节能减排政策的推进，LED照明市场持续增长。据最新研究报告显示，2026年全球LED市场规模将突破800亿美元。智能照明、人因照明成为新增长点。我司已在这些领域布局多年，拥有完整的产品线和技术积累。\n\n#LED照明 #行业趋势 #节能减排',
+        platforms: '["linkedin","facebook"]',
+        status: 'published',
+        scheduled_at: '2026-04-15T09:00:00.000Z',
+        published_at: '2026-04-15T09:00:00.000Z',
+        theme: '行业洞察',
+        style: '专业分析',
+        hashtags: '["LED照明","行业趋势","节能减排","智能照明"]',
+        media_urls: '["https://images.unsplash.com/photo-1565814636199-ae8133055c1c?w=800"]',
+        ai_generated: 1,
+        created_at: '2026-04-14T15:00:00.000Z',
+        updated_at: '2026-04-15T09:00:00.000Z',
+      },
+      {
+        title: '新品发布：400W高效单晶硅太阳能板',
+        content: '🎉 重磅新品上线！我司最新推出400W高效单晶硅太阳能电池板，采用PERC技术，转换效率高达21.3%。半片电池设计有效减少热斑效应，25年质保让您安心使用。\n\n✅ TÜV认证 ✅ IEC认证 ✅ CE认证\n\n欢迎各国经销商、工程商询价合作！',
+        platforms: '["linkedin","instagram"]',
+        status: 'published',
+        scheduled_at: '2026-04-17T10:00:00.000Z',
+        published_at: '2026-04-17T10:05:00.000Z',
+        theme: '新品发布',
+        style: '产品推广',
+        hashtags: '["太阳能","新品发布","光伏","清洁能源"]',
+        media_urls: '["https://images.unsplash.com/photo-1509391366360-2e959784a276?w=800"]',
+        ai_generated: 0,
+        created_at: '2026-04-16T08:00:00.000Z',
+        updated_at: '2026-04-17T10:05:00.000Z',
+      },
+      {
+        title: '客户案例：UK Green Energy 政府项目合作',
+        content: '很高兴分享我们与英国UK Green Energy在政府Green Homes Grant项目中的合作案例。该项目采用我司400W单晶硅太阳能板500+块，为伦敦地区居民提供清洁能源解决方案。\n\n从产品定制到物流交付，我们提供了全程一站式服务。客户对产品质量和交付效率给予了高度评价。',
+        platforms: '["linkedin"]',
+        status: 'published',
+        scheduled_at: '2026-04-19T08:30:00.000Z',
+        published_at: '2026-04-19T08:30:00.000Z',
+        theme: '客户案例',
+        style: '案例分享',
+        hashtags: '["客户案例","太阳能","英国市场","B2B"]',
+        media_urls: '[]',
+        ai_generated: 1,
+        created_at: '2026-04-18T14:00:00.000Z',
+        updated_at: '2026-04-19T08:30:00.000Z',
+      },
+      {
+        title: '半人马贸易参加2026广交会',
+        content: '📢 半人马贸易将参加第140届中国进出口商品交易会（广交会）！\n\n展位号：Hall 8.1-B23\n展期：2026年4月25-29日\n\n我们将展示最新的LED照明、太阳能板及家居装饰产品线。欢迎新老客户莅临参观！\n\n现场还有专属优惠和新品首发，不容错过！',
+        platforms: '["linkedin","facebook","instagram"]',
+        status: 'scheduled',
+        scheduled_at: '2026-04-23T08:00:00.000Z',
+        published_at: null,
+        theme: '公司动态',
+        style: '活动宣传',
+        hashtags: '["广交会","Canton Fair","外贸","展会"]',
+        media_urls: '[]',
+        ai_generated: 0,
+        created_at: '2026-04-20T10:00:00.000Z',
+        updated_at: '2026-04-20T10:00:00.000Z',
+      },
+      {
+        title: '如何选择合适的LED灯泡？专业买家指南',
+        content: '为帮助海外采购商更好地选择LED产品，我们整理了一份专业买家指南：\n\n1️⃣ 色温选择：暖白(2700K)适合家居，自然白(4000K)适合办公，冷白(6500K)适合商业\n2️⃣ 显色指数：Ra>80为基准，高端场所建议Ra>90\n3️⃣ 认证要求：北美需UL/FCC，欧洲需CE/RoHS，中东需SASO\n4️⃣ 包装与MOQ：根据市场需求灵活定制\n\n需要更多专业建议？欢迎私信咨询！',
+        platforms: '["linkedin"]',
+        status: 'scheduled',
+        scheduled_at: '2026-04-25T09:00:00.000Z',
+        published_at: null,
+        theme: '行业洞察',
+        style: '教育内容',
+        hashtags: '["LED","买家指南","B2B","照明知识"]',
+        media_urls: '["https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?w=800"]',
+        ai_generated: 1,
+        created_at: '2026-04-20T16:00:00.000Z',
+        updated_at: '2026-04-20T16:00:00.000Z',
+      },
+      {
+        title: '公司月报：4月业绩亮点回顾',
+        content: '📊 4月业绩亮点：\n\n• 新增客户：12家，覆盖5个国家\n• 成交订单：23单，总金额$456,000\n• 重点市场：欧洲(45%)、中东(25%)、南美(15%)\n• 产品热度：LED照明持续领跑，太阳能板增长迅猛\n\n感谢团队的努力和客户的信任！5月我们将继续扩大市场覆盖。',
+        platforms: '["linkedin"]',
+        status: 'draft',
+        scheduled_at: null,
+        published_at: null,
+        theme: '公司动态',
+        style: '数据报告',
+        hashtags: '["月报","业绩","外贸成绩"]',
+        media_urls: '[]',
+        ai_generated: 0,
+        created_at: '2026-04-21T02:00:00.000Z',
+        updated_at: '2026-04-21T02:00:00.000Z',
+      },
+      {
+        title: '陶瓷花瓶北欧系列：设计与品质的完美结合',
+        content: '我们的手工陶瓷花瓶北欧系列持续热销！采用景德镇高温烧制工艺，莫兰迪色系，简约优雅。\n\n🏠 适用场景：家居装饰、酒店软装、商业空间\n🎨 支持OEM定制：颜色、尺寸、logo\n📦 MOQ：200套起\n\n已通过SGS和BSCI认证，品质有保障。德国、澳洲客户复购率超60%！',
+        platforms: '["instagram","facebook"]',
+        status: 'draft',
+        scheduled_at: null,
+        published_at: null,
+        theme: '新品发布',
+        style: '产品推广',
+        hashtags: '["陶瓷","花瓶","家居装饰","北欧风"]',
+        media_urls: '["https://images.unsplash.com/photo-1612198188060-c7c2a3b66eae?w=800"]',
+        ai_generated: 1,
+        created_at: '2026-04-21T01:30:00.000Z',
+        updated_at: '2026-04-21T01:30:00.000Z',
+      },
+      {
+        title: '中东市场钢管采购趋势与合作机遇',
+        content: '中东地区基建持续升温，钢管需求稳步增长。阿联酋、沙特、卡塔尔成为重要采购市场。\n\n我司主要供应：\n• DN50-DN300热镀锌钢管\n• API 5L石油管道用管\n• ASTM标准建筑用管\n\n已与多家中东工程公司建立长期合作，提供从样品到大批量的全流程服务。\n\n#中东市场 #钢管 #基建',
+        platforms: '["linkedin"]',
+        status: 'scheduled',
+        scheduled_at: '2026-04-27T07:00:00.000Z',
+        published_at: null,
+        theme: '行业洞察',
+        style: '市场分析',
+        hashtags: '["中东市场","钢管","基建","B2B贸易"]',
+        media_urls: '["https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=800"]',
+        ai_generated: 1,
+        created_at: '2026-04-21T00:00:00.000Z',
+        updated_at: '2026-04-21T00:00:00.000Z',
+      },
+      {
+        title: '感谢TechCorp长期合作——LED大客户专访',
+        content: '今天分享一位重要客户的合作故事。TechCorp Ltd.是我们的A级客户，合作至今已完成8笔订单，总金额超$125,000。\n\nJohn Smith先生表示："半人马贸易的产品质量稳定，交期准确，售后响应迅速。他们是我们在中国最可靠的LED供应商。"\n\n我们将继续以客户为中心，提供优质的产品和服务！',
+        platforms: '["linkedin","facebook"]',
+        status: 'published',
+        scheduled_at: '2026-04-20T11:00:00.000Z',
+        published_at: '2026-04-20T11:00:00.000Z',
+        theme: '客户案例',
+        style: '客户故事',
+        hashtags: '["客户案例","LED","长期合作","客户好评"]',
+        media_urls: '[]',
+        ai_generated: 0,
+        created_at: '2026-04-19T20:00:00.000Z',
+        updated_at: '2026-04-20T11:00:00.000Z',
+      },
+    ];
+
+    for (const cp of contentPosts) {
+      insertContent.run(
+        crypto.randomUUID(), DEMO_USER_ID, cp.title, cp.content, cp.platforms,
+        cp.status, cp.scheduled_at, cp.published_at, cp.theme, cp.style,
+        cp.hashtags, cp.media_urls, cp.ai_generated, cp.created_at, cp.updated_at
+      );
+    }
   });
 
   seed();
-  console.log('✅ Seed data inserted: 1 profile, 8 customers, 6 products, 7 inquiries');
+  console.log('✅ Seed data inserted: 1 profile, 8 customers, 6 products, 7 inquiries, 9 content posts');
 }
 
 // Run init on load

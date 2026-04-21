@@ -32,6 +32,7 @@ app.use('/api/trade/inquiries', require('./routes/inquiries.cjs'));
 app.use('/api/trade/profile', require('./routes/profile.cjs'));
 app.use('/api/trade/dashboard', require('./routes/dashboard.cjs'));
 app.use('/api/trade/upload', require('./routes/upload.cjs'));
+app.use('/api/trade/content', require('./routes/content.cjs'));
 
 // Start server
 async function start() {

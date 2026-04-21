@@ -1,25 +1,25 @@
 /**
- * SocialLayout - 社媒中心子导航布局
+ * SocialLayout → 内容中心
+ * 3 tabs: 内容日历(C位) → 内容创作 → 素材库
  */
 import { NavLink, Outlet } from "react-router-dom";
-import { Users, FolderOpen, PenTool, CalendarDays } from "lucide-react";
+import { CalendarDays, PenTool, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ApiKeyBanner from "@/components/ApiKeyBanner";
 
 const subNav = [
-  { label: "账号管理", href: "/social/accounts", icon: Users },
-  { label: "素材库", href: "/social/assets", icon: FolderOpen },
-  { label: "内容创作", href: "/social/create", icon: PenTool },
   { label: "内容日历", href: "/social/calendar", icon: CalendarDays },
+  { label: "内容创作", href: "/social/create", icon: PenTool },
+  { label: "素材库", href: "/social/assets", icon: FolderOpen },
 ];
 
 export default function SocialLayout() {
   return (
     <div className="space-y-4">
-      <ApiKeyBanner description="后，AI 文案生成、多平台改写等功能将自动激活" />
+      <ApiKeyBanner description="后，AI 内容生成、批量排期等功能将自动激活" />
       <div>
-        <h2 className="font-display font-semibold text-lg">社媒中心</h2>
-        <p className="text-xs text-muted-foreground">AI辅助创作 · 多平台自动发布</p>
+        <h2 className="font-display font-semibold text-lg">内容中心</h2>
+        <p className="text-xs text-muted-foreground">AI预生成 · 按日历发布 · 多平台分发</p>
       </div>
       <div className="flex gap-1 border-b border-border pb-0 overflow-x-auto">
         {subNav.map((item) => {
