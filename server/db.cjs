@@ -456,6 +456,44 @@ function seedDemoData() {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
+    // --- More messages for existing inquiries (AI replies, deeper conversations) ---
+    // AI reply to John Smith (i1)
+    insertMessage.run(crypto.randomUUID(), i1, 'ai',
+      'Dear John,\n\nThank you for your inquiry about LED bulbs A60 9W.\n\nHere is our quotation for 5,000 units:\n- Unit price (FOB Shenzhen): $1.65/pc (E27 base, 4000K)\n- Lead time: 15-18 working days after order confirmation\n- Payment: 30% T/T deposit, 70% before shipment\n\nYes, we do have UL certification for the US market. I\'ve attached the certificate for your reference.\n\nPlease let me know if you need samples first.\n\nBest regards,\nCentaur Trade Team',
+      null, 1, '-45 minutes');
+    insertMessage.run(crypto.randomUUID(), i1, 'customer',
+      'Thanks for the quick quote! The price looks competitive. Can you do $1.55 for 10,000 units? Also need samples first — 10pcs of each color temperature.',
+      null, 0, '-30 minutes');
+
+    // AI reply to Maria Garcia (i2)
+    insertMessage.run(crypto.randomUUID(), i2, 'ai',
+      'Dear Maria,\n\nThank you for your interest in our solar panels.\n\nProduct: Solar Panel 400W Mono (SP-400W-M)\n- Efficiency: 21.3% (PERC technology)\n- Dimensions: 1755×1038×35mm\n- Weight: 20.5kg/panel\n- MOQ: 50 units\n- Unit price (FOB): $82.00/unit for 50-99 units, $78.50/unit for 100+ units\n\nCertifications: TÜV, IEC 61215, CE\nWarranty: 12-year product warranty, 25-year linear power warranty\n\nWould you like us to prepare a detailed proposal for your residential project?\n\nBest regards',
+      null, 1, '-1 hours');
+
+    // More messages for Sarah Johnson (i4)
+    insertMessage.run(crypto.randomUUID(), i4, 'ai',
+      'Hi Sarah,\n\nThank you for your inquiry about phone cases! We\'d be happy to help.\n\nOur TPU Clear Phone Case lineup:\n- Compatible models: iPhone 15/16 series, Samsung Galaxy S24/S25\n- Material: High-quality TPU, 1.2mm thickness\n- Features: Anti-drop, anti-scratch, anti-fingerprint\n- MOQ: 5,000 pcs per model\n- Unit price: $0.55/pc for 5,000+, $0.45/pc for 20,000+\n\nWe also offer custom logo printing and retail packaging.\n\nWould you like to see our catalog?\n\nBest regards',
+      null, 1, '-5 hours');
+    insertMessage.run(crypto.randomUUID(), i4, 'customer',
+      'Great, the pricing works for us. We need iPhone 16 Pro and iPhone 16 Pro Max cases. Can you send samples? We\'re in Sydney.',
+      null, 0, '-4 hours');
+    insertMessage.run(crypto.randomUUID(), i4, 'user',
+      'Hi Sarah, absolutely! I\'ll arrange 5 samples of each model via DHL Express to Sydney. Should arrive in 3-4 business days. Could you please share your shipping address?',
+      null, 0, '-3 hours');
+
+    // More messages for Lucas Müller (i5)
+    insertMessage.run(crypto.randomUUID(), i5, 'user',
+      'Hi Lucas! Yes, we ship to Germany regularly. Our ceramic vase set (3-piece, Morandi color) is very popular with European interior designers.\n\nMOQ: 200 sets\nPrice: €7.80/set (CIF Hamburg)\nLead time: 20-25 days\n\nWe can also do custom colors and sizes. Would you like to discuss further?',
+      null, 0, '-20 hours');
+    insertMessage.run(crypto.randomUUID(), i5, 'customer',
+      'That sounds perfect! I run a home decor shop in Berlin. Can you do a sample order of 20 sets first? And do you have a product catalog I can browse?',
+      null, 0, '-18 hours');
+
+    // More messages for Roberto Silva (i6)
+    insertMessage.run(crypto.randomUUID(), i6, 'ai',
+      'Olá Roberto!\n\nObrigado pelo interesse! Sim, exportamos para o Brasil regularmente.\n\nNossos produtos LED mais populares no mercado brasileiro:\n- LED Bulb A60 9W: $1.85/pc (FOB)\n- LED Strip Light 5M RGB: $3.20/roll (FOB)\n\nTemos certificações INMETRO em andamento. Aceitamos pagamento via L/C ou T/T.\n\nGostaria de receber nosso catálogo completo em português?\n\nAtenciosamente,\nEquipe Centaur Trade',
+      null, 1, '-20 hours');
+
     const contentPosts = [
       {
         title: '2026年LED照明行业趋势分析',
@@ -592,6 +630,172 @@ function seedDemoData() {
         created_at: '2026-04-19T20:00:00.000Z',
         updated_at: '2026-04-20T11:00:00.000Z',
       },
+      // --- Additional posts for richer calendar ---
+      {
+        title: 'LED Strip Light应用场景全解析',
+        content: '💡 LED灯带不仅仅是装饰！来看看全球客户如何使用我们的RGB灯带：\n\n🏠 Home: 氛围照明、橱柜底灯、楼梯引导灯\n🏢 Commercial: 酒店大堂、餐厅吧台、零售展示\n🎭 Entertainment: KTV、酒吧、舞台背景\n🏗 Architecture: 建筑轮廓、桥梁亮化\n\nIP65防水，室内室外都能用。MOQ 500卷起，支持定制长度和颜色。\n\n#LEDStrip #照明设计 #装饰灯',
+        platforms: '["instagram","facebook"]',
+        status: 'published',
+        scheduled_at: '2026-04-05T14:00:00.000Z',
+        published_at: '2026-04-05T14:02:00.000Z',
+        theme: '新品发布',
+        style: '产品推广',
+        hashtags: '["LEDStrip","照明设计","装饰灯","灯带"]',
+        media_urls: '["https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800"]',
+        ai_generated: 1,
+        created_at: '2026-04-04T10:00:00.000Z',
+        updated_at: '2026-04-05T14:02:00.000Z',
+      },
+      {
+        title: 'Q1 Export Data: China LED Market Growth',
+        content: '📊 2026 Q1 China LED export data is out!\n\nKey highlights:\n• Total LED exports: $12.8B (+15% YoY)\n• Top destinations: US (22%), EU (28%), Southeast Asia (18%)\n• Smart lighting segment grew 35%\n• Solar-LED hybrid products emerging as new category\n\nAs a manufacturer with 10+ years of export experience, we\'re seeing strong demand across all segments. Contact us for competitive pricing!\n\n#ChinaExport #LEDMarket #TradeData #B2B',
+        platforms: '["linkedin"]',
+        status: 'published',
+        scheduled_at: '2026-04-08T08:00:00.000Z',
+        published_at: '2026-04-08T08:01:00.000Z',
+        theme: '行业洞察',
+        style: '数据报告',
+        hashtags: '["ChinaExport","LEDMarket","TradeData","B2B"]',
+        media_urls: '[]',
+        ai_generated: 1,
+        created_at: '2026-04-07T16:00:00.000Z',
+        updated_at: '2026-04-08T08:01:00.000Z',
+      },
+      {
+        title: 'Behind the Scenes: Our Smart Factory Tour',
+        content: '🏭 Ever wondered how your LED bulbs are made? Take a virtual tour of our partner factory — 明辉照明科技!\n\n✅ ISO 9001 certified production line\n✅ Automated SMD mounting: 50,000 units/day capacity\n✅ 6-step quality control: from raw materials to final packaging\n✅ Clean room assembly for high-CRI products\n\nWe believe in transparency. Every buyer deserves to know where their products come from.\n\nDM us to schedule a live video factory tour! 📹\n\n#FactoryTour #QualityControl #MadeInChina #Transparency',
+        platforms: '["linkedin","instagram"]',
+        status: 'published',
+        scheduled_at: '2026-04-10T10:00:00.000Z',
+        published_at: '2026-04-10T10:00:00.000Z',
+        theme: '公司动态',
+        style: '品牌故事',
+        hashtags: '["FactoryTour","QualityControl","MadeInChina","Transparency"]',
+        media_urls: '["https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800"]',
+        ai_generated: 0,
+        created_at: '2026-04-09T14:00:00.000Z',
+        updated_at: '2026-04-10T10:00:00.000Z',
+      },
+      {
+        title: 'Ramadan Kareem! Special Offers for Middle East Partners',
+        content: '🌙 Ramadan Mubarak to all our Middle East partners!\n\nTo celebrate this holy month, we\'re offering special pricing:\n🔹 LED Bulbs: Extra 5% off for orders over 10,000pcs\n🔹 Solar Panels: Free shipping samples to GCC countries\n🔹 Steel Pipes: Extended payment terms (60 days)\n\nOffer valid until end of Ramadan. Contact Ahmed or our sales team for details.\n\n#Ramadan #MiddleEast #SpecialOffer #B2BTrade',
+        platforms: '["linkedin","facebook","instagram"]',
+        status: 'published',
+        scheduled_at: '2026-04-12T06:00:00.000Z',
+        published_at: '2026-04-12T06:00:00.000Z',
+        theme: '节日营销',
+        style: '促销活动',
+        hashtags: '["Ramadan","MiddleEast","SpecialOffer","B2BTrade"]',
+        media_urls: '[]',
+        ai_generated: 1,
+        created_at: '2026-04-11T10:00:00.000Z',
+        updated_at: '2026-04-12T06:00:00.000Z',
+      },
+      {
+        title: 'Solar Panel Installation Guide for Distributors',
+        content: '☀️ Helping your customers install solar panels correctly is key to long-term satisfaction.\n\nHere\'s our quick guide for distributors:\n\n1️⃣ Site Assessment: Roof orientation, shading analysis, structural load\n2️⃣ System Design: Series vs parallel configuration, inverter sizing\n3️⃣ Mounting: Rail spacing, tilt angle optimization by latitude\n4️⃣ Wiring: MC4 connectors, proper grounding, surge protection\n5️⃣ Commissioning: IV curve testing, monitoring setup\n\nWe provide free technical support for all our solar panel distributors worldwide.\n\n#SolarEnergy #Installation #TechnicalSupport',
+        platforms: '["linkedin"]',
+        status: 'published',
+        scheduled_at: '2026-04-14T09:00:00.000Z',
+        published_at: '2026-04-14T09:05:00.000Z',
+        theme: '行业洞察',
+        style: '教育内容',
+        hashtags: '["SolarEnergy","Installation","TechnicalSupport","Distributor"]',
+        media_urls: '["https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=800"]',
+        ai_generated: 1,
+        created_at: '2026-04-13T15:00:00.000Z',
+        updated_at: '2026-04-14T09:05:00.000Z',
+      },
+      {
+        title: 'Earth Day 2026: Our Commitment to Sustainability',
+        content: '🌍 Happy Earth Day! At Centaur Trade, sustainability isn\'t just a buzzword — it\'s how we do business.\n\nOur green commitments:\n♻️ 100% of our LED products are RoHS compliant\n☀️ Solar panels helping offset 50,000+ tons of CO2 annually\n📦 Transitioning to biodegradable packaging by 2027\n🏭 Partner factories using 30% renewable energy\n\nEvery order you place with us contributes to a greener planet.\n\n#EarthDay #Sustainability #GreenBusiness #CleanEnergy',
+        platforms: '["linkedin","facebook","instagram"]',
+        status: 'scheduled',
+        scheduled_at: '2026-04-22T07:00:00.000Z',
+        published_at: null,
+        theme: '节日营销',
+        style: '品牌价值',
+        hashtags: '["EarthDay","Sustainability","GreenBusiness","CleanEnergy"]',
+        media_urls: '[]',
+        ai_generated: 1,
+        created_at: '2026-04-20T18:00:00.000Z',
+        updated_at: '2026-04-20T18:00:00.000Z',
+      },
+      {
+        title: 'Canton Fair Day 1 Highlights',
+        content: '🎪 广交会第一天精彩回顾！\n\nDay 1 at Canton Fair was incredible:\n📍 Booth 8.1-B23 — fully packed!\n🤝 Met 40+ new potential buyers from 12 countries\n🌟 Star product: Our new 450W bifacial solar panel got the most attention\n💬 Great feedback on LED smart bulb series\n\nIf you missed today, we\'re here until April 29!\nBook a meeting: centaur-trade.com/canton-fair\n\n#CantonFair2026 #TradeShow #B2B #Export',
+        platforms: '["linkedin","instagram"]',
+        status: 'scheduled',
+        scheduled_at: '2026-04-25T17:00:00.000Z',
+        published_at: null,
+        theme: '公司动态',
+        style: '活动报道',
+        hashtags: '["CantonFair2026","TradeShow","B2B","Export"]',
+        media_urls: '["https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800"]',
+        ai_generated: 0,
+        created_at: '2026-04-21T02:00:00.000Z',
+        updated_at: '2026-04-21T02:00:00.000Z',
+      },
+      {
+        title: '5 Questions Every LED Buyer Should Ask Their Supplier',
+        content: 'Buying LED products from China? Here are 5 critical questions:\n\n1. What\'s your defect rate? (Ours: <0.3%)\n2. Can you provide third-party test reports? (We share IES files)\n3. What\'s your warranty policy? (3-year standard, 5-year premium)\n4. Do you support small MOQ for first orders? (Yes, 500pcs)\n5. Can I visit your factory? (Live video tours available anytime)\n\nTransparency builds trust. We welcome tough questions.\n\n#LEDSourcing #BuyerGuide #SupplyChain #QualityAssurance',
+        platforms: '["linkedin"]',
+        status: 'scheduled',
+        scheduled_at: '2026-04-28T09:00:00.000Z',
+        published_at: null,
+        theme: '行业洞察',
+        style: '教育内容',
+        hashtags: '["LEDSourcing","BuyerGuide","SupplyChain","QualityAssurance"]',
+        media_urls: '[]',
+        ai_generated: 1,
+        created_at: '2026-04-21T01:00:00.000Z',
+        updated_at: '2026-04-21T01:00:00.000Z',
+      },
+      {
+        title: 'May Day Promotion: Bulk Order Discounts',
+        content: '🎉 劳动节大促来袭！May 1st - May 7th\n\nSpecial bulk pricing for all product categories:\n💡 LED Bulbs: Buy 20,000+ get 8% off\n☀️ Solar Panels: Buy 200+ get free logistics consultation\n🔧 Steel Pipes: 50 tons+ enjoy 60-day payment terms\n🏺 Ceramics: 500 sets+ get free custom packaging design\n\nFirst-time buyers: Extra 3% welcome discount!\n\nDM or email sales@centaur-trade.com to lock in your price.\n\n#MayDay #BulkDiscount #B2BDeals',
+        platforms: '["linkedin","facebook"]',
+        status: 'scheduled',
+        scheduled_at: '2026-04-29T08:00:00.000Z',
+        published_at: null,
+        theme: '节日营销',
+        style: '促销活动',
+        hashtags: '["MayDay","BulkDiscount","B2BDeals","Promotion"]',
+        media_urls: '[]',
+        ai_generated: 1,
+        created_at: '2026-04-21T03:00:00.000Z',
+        updated_at: '2026-04-21T03:00:00.000Z',
+      },
+      {
+        title: 'New Product: Smart WiFi LED Bulb with App Control',
+        content: '🆕 Introducing our latest product: Smart WiFi LED Bulb!\n\nFeatures:\n📱 App control (iOS & Android)\n🗣 Voice control (Alexa, Google Home)\n🎨 16 million colors + tunable white (2700K-6500K)\n⏰ Schedule & timer functions\n👥 Group control for whole-room sync\n\nNo hub required — connects directly to 2.4GHz WiFi.\n\nMOQ: 2,000 pcs | Price: $2.85/pc (FOB)\nCertifications: CE, FCC, RoHS\n\nPerfect for smart home distributors!\n\n#SmartHome #WiFiBulb #IoT #SmartLighting',
+        platforms: '["linkedin","facebook","instagram"]',
+        status: 'draft',
+        scheduled_at: null,
+        published_at: null,
+        theme: '新品发布',
+        style: '产品推广',
+        hashtags: '["SmartHome","WiFiBulb","IoT","SmartLighting"]',
+        media_urls: '["https://images.unsplash.com/photo-1565814636199-ae8133055c1c?w=800"]',
+        ai_generated: 0,
+        created_at: '2026-04-21T04:00:00.000Z',
+        updated_at: '2026-04-21T04:00:00.000Z',
+      },
+      {
+        title: 'Case Study: EuroTrade GmbH — 3 Years of Partnership',
+        content: 'Proud to share our partnership journey with EuroTrade GmbH 🇩🇪\n\n📅 Since 2023:\n• 5 successful orders, $89,000+ total value\n• Zero quality complaints\n• From solar panels to LED products — expanding categories\n\nMaria Garcia, Procurement Manager:\n"Centaur Trade understands the European market. Their products consistently meet our strict standards."\n\nWe value long-term relationships over one-time transactions.\n\n#PartnerSpotlight #Germany #B2BSuccess #CaseStudy',
+        platforms: '["linkedin"]',
+        status: 'draft',
+        scheduled_at: null,
+        published_at: null,
+        theme: '客户案例',
+        style: '案例分享',
+        hashtags: '["PartnerSpotlight","Germany","B2BSuccess","CaseStudy"]',
+        media_urls: '[]',
+        ai_generated: 1,
+        created_at: '2026-04-21T05:00:00.000Z',
+        updated_at: '2026-04-21T05:00:00.000Z',
+      },
     ];
 
     for (const cp of contentPosts) {
@@ -604,7 +808,7 @@ function seedDemoData() {
   });
 
   seed();
-  console.log('✅ Seed data inserted: 1 profile, 8 customers, 6 products, 7 inquiries, 9 content posts');
+  console.log('✅ Seed data inserted: 1 profile, 8 customers, 6 products, 7 inquiries (25+ messages), 20 content posts');
 }
 
 // Run init on load
