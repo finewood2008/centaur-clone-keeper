@@ -52,7 +52,12 @@ export async function apiFetch<T = unknown>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`/api/trade${path}`, {
+  // In Electron production mode (file:// protocol), use absolute URL
+  const baseUrl = window.location.protocol === 'file:'
+    ? 'http://localhost:3456/api/trade'
+    : '/api/trade';
+
+  const res = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers,
   });

@@ -58,6 +58,7 @@
     "@tiptap/pm": "^3.20.5",
     "@tiptap/react": "^3.20.5",
     "@tiptap/starter-kit": "^3.20.5",
+    "better-sqlite3": "^12.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -83,7 +84,6 @@
   },
   "optionalDependencies": {
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^11.10.0",
     "concurrently": "^9.1.2",
     "cors": "^2.8.6",
     "express": "^4.22.1",
@@ -146,13 +146,13 @@
       "target": [
         "dmg"
       ],
-      "icon": "public/favicon.ico"
+      "icon": "build/icon.icns"
     },
     "win": {
       "target": [
         "nsis"
       ],
-      "icon": "public/favicon.ico"
+      "icon": "build/icon.png"
     },
     "linux": {
       "target": [
